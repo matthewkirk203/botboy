@@ -43,15 +43,36 @@ async def leave():
 
 # Rock Paper Scissors
 @bot.command()
-async def rpc(player_choice):
+async def rps(player_choice):
+	# Result matrix - columns: player's choice / rows: bot's choice
 	result_matrix = [['draw','user','bot'],['bot','draw','user'],['user','bot','draw']]
 	choices = ['rock','paper','scissors']
-	bot_choice_index = random.randint(0,2)	
-	player_choice_index = choices.index(player_choice)
+	alt_choices = ['r','p','s']
+	# Bot makes a choice
+	bot_choice_index = random.randint(0,2)
+	# Try getting index from players choice
+	try:
+		player_choice_index = choices.index(player_choice)
+	except:
+		try:
+			player_choice_index = alt_choices.index(player_choice)
+		except:
+			await bot.say("ERROR: must enter 'rock' (or r), 'paper' (or p), 'scissors' (or s)")
+			return
 
+	# Determine result from matrix
 	result = result_matrix[bot_choice_index][player_choice_index]
 
-	await bot.say("The winner is: " + result)
+	if result == "user":
+		winner = "You win!"
+	elif result == "draw":
+		winner = "It's a draw ¯\_(ツ)_/¯"
+	elif result == "bot":
+		winner = "Better luck next time!"
+	# Create response
+	response = "You chose: {0} \nBotBoy chose: {1} \n{2}".format(choices[player_choice_index], choices[bot_choice_index], winner)
+	# Say it
+	await bot.say(response)
 
 # Overwatch
 @bot.command(pass_context=True)
