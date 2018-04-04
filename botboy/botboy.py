@@ -108,6 +108,12 @@ async def ow_list():
 	await bot.say(output)
 
 
+@bot.command(pass_context=True)
+async def tester(ctx):
+	em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF, set_image='https://images-na.ssl-images-amazon.com/images/I/41zrUtBHJpL.jpg', image='url')
+	em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
+	await bot.send_message(ctx.message.channel, embed=em)
+
 
 bot.run(TOKEN)
 conn.close()
