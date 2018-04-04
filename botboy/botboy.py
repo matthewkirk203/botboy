@@ -55,14 +55,36 @@ async def rpc(player_choice):
 
 # Overwatch
 @bot.command(pass_context=True)
-async def ow_add(ctx, battle_tag, member: discord.Member = None):
+async def ow_add(ctx, battle_tag, member = None):
 	if member is None:
 		member = ctx.message.author
+	print(type(member))
+	print(discord.Member)
+	if type(member) is not discord.Member:
+		await bot.say("ERROR: @mention the user instead of just typing it")
+		return
+
 	query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
 	#print(query)
 	c.execute(query)
-	await bot.say("Added " + battle_tag + " with discord member " + str(member))
+	await bot.say("Added " + battle_tag + " with discord member @" + str(member))
 	conn.commit()
+
+@bot.command()
+async def ow_list():
+	query = "SELECT * FROM Overwatch"
+	tags = []
+	for row in c.execute(query):
+		battle_tag = row[0]
+		member_name = row[1]
+		tags.append([battle_tag, member_name])
+	tags.sort(key=lambda y: y[0].lower())
+	print(tags)
+	output = ''
+	for row in tags:
+		output += row[0] + " as @" + row[1] + '\n'
+
+	await bot.say(output)
 
 
 
