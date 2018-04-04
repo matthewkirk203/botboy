@@ -32,7 +32,7 @@ async def rpc(player_choice):
 	result_matrix = [['draw','user','bot'],['bot','draw','user'],['user','bot','draw']]
 	choices = ['rock','paper','scissors']
 	bot_choice_index = random.randint(0,2)	
-	player_choice_index = choices.index('player_choice')
+	player_choice_index = choices.index(player_choice)
 
 	result = result_matrix[bot_choice_index][player_choice_index]
 
