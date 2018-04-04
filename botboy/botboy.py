@@ -1,11 +1,11 @@
 import random
 import discord
 from discord.ext import commands
-import sqlite3 as sql
+import sqlite3
 
 # Establish db connection
 db = 'botboy_database.sqlite'
-conn = sql.connect(db)
+conn = sqlite3.connect(db)
 c = conn.cursor()
 overwatch_table = "Overwatch"
 rps_table = "RPS"
