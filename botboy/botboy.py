@@ -3,6 +3,7 @@ import discord
 import logging
 from discord.ext import commands
 import sqlite3
+import sql
 
 
 # Establish db connection
@@ -94,7 +95,8 @@ async def ow_add(ctx, battle_tag, member = None):
         await bot.say("ERROR: @mention the user instead of just typing it")
         return
 
-    query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
+    query = sql.insert(overwatch_table, [battle_tag, str(member)])
+    #query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
     #print(query)
     c.execute(query)
     await bot.say("Added " + battle_tag + " with discord member @" + str(member))
@@ -103,7 +105,8 @@ async def ow_add(ctx, battle_tag, member = None):
 
 @bot.command()
 async def ow_list():
-    query = "SELECT * FROM Overwatch"
+    query = sql.select(overwatch_table)
+    #query = "SELECT * FROM Overwatch"
     tags = []
     for row in c.execute(query):
         battle_tag = row[0]
