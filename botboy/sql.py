@@ -1,13 +1,13 @@
 """Serves as a library for easier sql queries"""
 
-def select(table_name, column_names = "*" : list, WHERE = None : list, GROUP = None, HAVING = None, ORDER_BY = None):
+def select(table_name, column_names = "*", WHERE = None, GROUP = None, HAVING = None, ORDER_BY = None):
   query = "SELECT "
   if column_names == "*":
     query += "*"
   else:
     query += ','.join(column_names)
   
-  query += " " + table_name
+  query += " FROM " + table_name
   
   if WHERE != None:
     query += " WHERE " + "AND ".join[WHERE]
@@ -18,18 +18,19 @@ def select(table_name, column_names = "*" : list, WHERE = None : list, GROUP = N
   #I'll do the rest later
   return query
   
-def insert(table_name, values : list, column_names = None : list)
+def insert(table_name, values, column_names = None):
   query = "INSERT INTO " + table_name
   if column_names != None:
     query += " (" + ",".join(column_names) + ")"
   query += " VALUES("
-  # Strings (varchars) need to be enclosed in single quotes. Build correct type list
+  # Strings (varchars) need to be enclosed in single quotes. This has a bug somewhere I can feel it.
   new_values = []
   for value in values:
-    if str(value).isnumeric():
+    if type(value) is str:
+      value = "'" + value + "'"
       new_values.append(value)
     else:
-    # Maybe this won't work? Might have to hard code single quotes
       new_values.append(str(value))
   query += ','.join(new_values) + ")"
   return query
+
