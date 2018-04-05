@@ -14,6 +14,7 @@ def sqlize(value):
     value = str(value)
   return value
 
+#TODO: Change these to use dicts
 def select(table_name, column_names = "*", WHERE = None, GROUP = None, HAVING = None, ORDER_BY = None):
   query = "SELECT "
   if column_names == "*":
