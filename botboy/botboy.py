@@ -39,6 +39,7 @@ async def add(left : int, right : int):
 async def leave():
 	conn.close()
 	await bot.say("Bye!")
+	await bot.logout()
 	quit()
 
 # Rock Paper Scissors
