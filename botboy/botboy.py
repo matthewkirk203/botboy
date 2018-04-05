@@ -126,10 +126,23 @@ async def tester(ctx):
     await bot.send_message(ctx.message.channel, embed=em)
 
 
+# Policing
+@bot.listen('on_message')
+async def policer(message):
+    log.info(message.attachments)
+    log.info(message.author)
+    log.info(bot.user)
+    # TODO: figure out implementation - commented out for now to reduce bot messages
+    # if message.author != bot.user:
+    #     if not message.attachments:
+    #         log.info("No attachments found in message")
+    #         await bot.send_message(message.channel, "You know the rules.")
+
+
 def setup_logger():
     logger = logging.getLogger()
     if not logger.handlers:
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.INFO)
 
         fmt_str = '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
         formatter = logging.Formatter(fmt_str)
