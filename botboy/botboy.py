@@ -4,7 +4,7 @@ import logging
 from discord.ext import commands
 import sqlite3
 import sql
-from setup import *
+import setup
 
 
 # Establish db connection
@@ -162,7 +162,7 @@ async def policer(message):
         # TODO: do async's need an await every time? Or is return sufficient?
         return
 
-setup_logger()
+setup.setup_logger()
 
 log = logging.getLogger('BotBoy')
 
