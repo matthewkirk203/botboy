@@ -4,6 +4,7 @@ import logging
 from discord.ext import commands
 import sqlite3
 import sql
+from setup import *
 
 
 # Establish db connection
@@ -132,30 +133,34 @@ async def tester(ctx):
 # Policing
 @bot.listen('on_message')
 async def policer(message):
-    log.info(message.attachments)
-    log.info(message.author)
-    log.info(bot.user)
-    # TODO: figure out implementation - commented out for now to reduce bot messages
-    # if message.author != bot.user:
-    #     if not message.attachments:
-    #         log.info("No attachments found in message")
-    #         await bot.send_message(message.channel, "You know the rules.")
+    # TODO: add toggle for deleting or not deleting commands
+    #       e.g. in videos-memes, commands should not be responded to, and should be deleted
+    #       in other channels, we may want to allow commands, but not allow regular text
+    #       may require a change to on_message coroutine
 
+    # Get the first word / section in a message, similar to how discord.py does it
+    # Inspired by process_commands in bot.py
+    view = commands.view.StringView(message.content)
+    view.skip_string(bot.command_prefix)
+    command = view.get_word()
+    log.debug(command)
 
-def setup_logger():
-    logger = logging.getLogger()
-    if not logger.handlers:
-        logger.setLevel(logging.INFO)
-
-        fmt_str = '%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-        formatter = logging.Formatter(fmt_str)
-
-        sh = logging.StreamHandler()
-        sh.setLevel(logging.DEBUG)
-        sh.setFormatter(formatter)
-
-        logger.addHandler(sh)
-
+    # Check if message starts with a command - if yes, return
+    if command in bot.commands:
+        log.debug("--- caught a command")
+        return
+    # Check if BotBoy wrote the message
+    if message.author != bot.user:
+        # Check if the message has attachments
+        if not message.attachments:
+            log.debug(message.author)
+            log.info("No attachments found in message")
+            # TODO: get rid of return when we add an await
+            # await bot.send_message(message.channel, "You know the rules.")
+            return
+    else:
+        # TODO: do async's need an await every time? Or is return sufficient?
+        return
 
 setup_logger()
 
