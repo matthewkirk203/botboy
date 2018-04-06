@@ -19,6 +19,15 @@ TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
 
+async def background_tasks(loop_timer):
+    await bot.wait_until_ready()
+    counter = 0
+    #TODO: Get the channel ID
+    channel = discord.Object(id='channel_id_here')
+    while not bot.is_closed:
+        counter += 1
+        await bot.send_message(channel, counter)
+        await asyncio.sleep(loop_timer) # task runs every loop_timer seconds
 
 @bot.event
 async def on_ready():
@@ -185,5 +194,6 @@ setup.setup_logger()
 
 log = logging.getLogger('BotBoy')
 
+bot.loop.create_task(background_tasks(60))
 bot.run(TOKEN)
 conn.close()
