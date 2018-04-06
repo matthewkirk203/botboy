@@ -14,8 +14,8 @@ def sqlize(value):
     value = str(value)
   return value
 
-#TODO: Change these to use dicts
-def select(table_name, column_names = "*", WHERE = None, GROUP = None, HAVING = None, ORDER_BY = None):
+#TODO: Implement all the parameters.
+def select(table_name, column_names = "*", condition = None : dict, GROUP = None, HAVING = None, order = None):
   query = "SELECT "
   if column_names == "*":
     query += "*"
@@ -24,13 +24,17 @@ def select(table_name, column_names = "*", WHERE = None, GROUP = None, HAVING = 
   
   query += " FROM " + table_name
   
-  if WHERE != None:
-    query += " WHERE " + "AND ".join[WHERE]
+  #TODO: Test
+  if condition != None:
+    query += " WHERE "
+    conditions = list()
+    for column, value in condition.items():
+      conditions.append(column + "=" + sqlize(value))
+    query += "AND ".join[conditions]
     
-  if ORDER_BY != None:
-    query += " ORDER BY " + ORDER_BY
+  if order != None:
+    query += " ORDER BY " + order
     
-  #TODO: I'll do the rest later
   return query
   
 def insert(table_name, values, column_names = None):
@@ -39,7 +43,6 @@ def insert(table_name, values, column_names = None):
     query += " (" + ",".join(column_names) + ")"
   query += " VALUES("
   # Strings (varchars) need to be enclosed in single quotes. This has a bug somewhere I can feel it.
-  #TODO: I can use sqlize here and will eventually do that.
   new_values = []
   for value in values:
     new_values.append(sqlize(value))
