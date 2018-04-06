@@ -30,7 +30,7 @@ def select(table_name, column_names = "*", condition = None : dict, GROUP = None
     conditions = list()
     for column, value in condition.items():
       conditions.append(column + "=" + sqlize(value))
-    query += "AND ".join[conditions]
+    query += "AND ".join(conditions)
     
   if order != None:
     query += " ORDER BY " + order
