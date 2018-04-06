@@ -48,8 +48,13 @@ async def leave():
 
 
 # Rock Paper Scissors
-@bot.command()
-async def rps(player_choice):
+@bot.command(pass_context=True)
+async def rps(ctx, player_choice):
+    # See if player is already in database. If not, create their entry.
+    member = ctx.message.author
+    query = sql.select(rps_table, condition={"DiscordName":member})
+    #TODO: Check and see if any rows are returned. Some research needs to be done.
+    
     # Result matrix - columns: player's choice / rows: bot's choice
     result_matrix = [['draw','user','bot'],['bot','draw','user'],['user','bot','draw']]
     choices = ['rock','paper','scissors']
@@ -70,17 +75,31 @@ async def rps(player_choice):
 
     # Determine result from matrix
     result = result_matrix[bot_choice_index][player_choice_index]
-
+    
+    column_update = {}
+    #TODO: Make sure column names are correct.
     if result == "user":
         winner = "You win!"
+        column_update = {"Wins":"Wins+1"}
     elif result == "draw":
         winner = "It's a draw ¯\_(ツ)_/¯"
+        column_update = {"Draws":"Draws+1"}
     elif result == "bot":
         winner = "Better luck next time!"
+        column_update = {"Losses":"Losses+1"}
+        
+    # Update database
+    sql.update(rps_table, column_update, {"DiscordName":member})
+    
     # Create response
     response = "You chose: {0} \nBotBoy chose: {1} \n{2}".format(choices[player_choice_index], choices[bot_choice_index], winner)
+    query = sql.select(rps_table, condition={"DiscordName":member})
+    for row in c.execute(query):
+        #TODO: look at row results to calculate win %
+        response += "\n" + row
     # Say it
     await bot.say(response)
+    
 
 
 # Overwatch
