@@ -5,6 +5,7 @@ from discord.ext import commands
 import sqlite3
 import sql
 import setup
+import asyncio
 
 
 # Establish db connection
