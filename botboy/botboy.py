@@ -121,7 +121,34 @@ async def rps(ctx, player_choice):
     await bot.say(response)
     conn.commit()
     
+@bot.command(pass_context=True)
+async def rps_rank(ctx):
+    query = sql.select(rps_table, order="Wins DESC")
+    #response = "{0:25} {1:4} {2:4} {3:4} {4:6}".format('Name', 'Wins', 'Draws', 'Losses', 'Win%')
+    # Create a list of lists that is Name Wins Draws Losses Win%
+    stats = [[],[],[]]
+    for row in c.execute(query):
+        wins = row[1]
+        draws = row[2]
+        losses = row[3]
+        # Populate each sublist with the appropriate value
+        stats[0].append(str(row[0]))
+        scores = [str(wins),str(draws),str(losses)]
+        stats[1].append("/".join(scores))
 
+        if (draws+losses) == 0:
+            win_percentage = 'Infinity!'
+        else:
+            win_percentage = (wins/(draws+losses))*100
+        # Append win percentage to last entry (because it's last)
+        stats[-1].append(str(win_percentage))
+        #response += "\n{0:25} {1:4} {2:4} {3:4} {4:6}".format(name, wins, draws, losses, win_percentage)
+
+    em = discord.Embed(title="Rock Paper Scissors Leaderboard", colour=0x800020)
+    em.add_field(name="Name", value='\n'.join(stats[0]), inline=True)
+    em.add_field(name="W/D/L", value='\n'.join(stats[1]), inline=True)
+    em.add_field(name="Win %", value='\n'.join(stats[-1]), inline=True)
+    await bot.send_message(ctx.message.channel, embed=em)
 
 # Overwatch
 @bot.command(pass_context=True)
