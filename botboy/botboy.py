@@ -112,10 +112,7 @@ async def rps(ctx, player_choice):
     wins = results[1]
     draws = results[2]
     losses = results[3]
-    if (draws+losses) == 0:
-        win_percentage = 'Infinity!'
-    else:
-        win_percentage = (wins/(wins+draws+losses))*100
+    win_percentage = (wins/(wins+draws+losses))*100
     response += "\nWins: " + str(wins) + "\nDraws: " + str(draws) + "\nLosses: " + str(losses) + "\nWin %: " + str(win_percentage) + "%"
     # Say it
     await bot.say(response)
@@ -135,11 +132,8 @@ async def rps_rank(ctx):
         stats[0].append(str(row[0]))
         scores = [str(wins),str(draws),str(losses)]
         stats[1].append(" / ".join(scores))
-
-        if (draws+losses) == 0:
-            win_percentage = 'Infinity!'
-        else:
-            win_percentage = (wins/(wins+draws+losses))*100
+        
+        win_percentage = (wins/(wins+draws+losses))*100
         # Append win percentage to last entry (because it's last)
         stats[-1].append(str(win_percentage))
         #response += "\n{0:25} {1:4} {2:4} {3:4} {4:6}".format(name, wins, draws, losses, win_percentage)
