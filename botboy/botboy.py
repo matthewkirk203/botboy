@@ -5,6 +5,7 @@ from discord.ext import commands
 import sqlite3
 import sql
 import setup
+import asyncio
 
 
 # Establish db connection
@@ -19,6 +20,15 @@ TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
 
+async def background_tasks(loop_timer):
+    await bot.wait_until_ready()
+    counter = 0
+    #TODO: Get the channel ID. Right now it is for bot-testing
+    channel = discord.Object(id=430560047295234051)
+    while not bot.is_closed:
+        counter += 1
+        await bot.send_message(channel, counter)
+        await asyncio.sleep(loop_timer) # task runs every loop_timer seconds
 
 @bot.event
 async def on_ready():
@@ -48,8 +58,18 @@ async def leave():
 
 
 # Rock Paper Scissors
-@bot.command()
-async def rps(player_choice):
+@bot.command(pass_context=True)
+async def rps(ctx, player_choice):
+    # See if player is already in database. If not, create their entry.
+    member = str(ctx.message.author)
+    query = sql.select(rps_table, condition={"DiscordName":member})
+    # Store all results from query in a list of tuples
+    results = c.execute(query).fetchall()
+    if len(results) == 0:
+        # Create entry
+        default_values = [member,0,0,0]
+        c.execute(sql.insert(rps_table, default_values))
+    
     # Result matrix - columns: player's choice / rows: bot's choice
     result_matrix = [['draw','user','bot'],['bot','draw','user'],['user','bot','draw']]
     choices = ['rock','paper','scissors']
@@ -70,18 +90,65 @@ async def rps(player_choice):
 
     # Determine result from matrix
     result = result_matrix[bot_choice_index][player_choice_index]
-
+    
+    column_update = {}
     if result == "user":
         winner = "You win!"
+        column_update = {"Wins":"Wins+1"}
     elif result == "draw":
         winner = "It's a draw ¯\_(ツ)_/¯"
+        column_update = {"Draws":"Draws+1"}
     elif result == "bot":
         winner = "Better luck next time!"
+        column_update = {"Losses":"Losses+1"}
+        
+    # Update database
+    c.execute(sql.update(rps_table, column_update, {"DiscordName":member}))
+    
     # Create response
     response = "You chose: {0} \nBotBoy chose: {1} \n{2}".format(choices[player_choice_index], choices[bot_choice_index], winner)
+    query = sql.select(rps_table, condition={"DiscordName":member})
+    results = c.execute(query).fetchone()
+    wins = results[1]
+    draws = results[2]
+    losses = results[3]
+    if (draws+losses) == 0:
+        win_percentage = 'Infinity!'
+    else:
+        win_percentage = (wins/(draws+losses))*100
+    response += "\nWins: " + str(wins) + "\nDraws: " + str(draws) + "\nLosses: " + str(losses) + "\nWin %: " + str(win_percentage) + "%"
     # Say it
     await bot.say(response)
+    conn.commit()
+    
+@bot.command(pass_context=True)
+async def rps_rank(ctx):
+    query = sql.select(rps_table, order="Wins DESC")
+    #response = "{0:25} {1:4} {2:4} {3:4} {4:6}".format('Name', 'Wins', 'Draws', 'Losses', 'Win%')
+    # Create a list of lists that is Name Wins Draws Losses Win%
+    stats = [[],[],[]]
+    for row in c.execute(query):
+        wins = row[1]
+        draws = row[2]
+        losses = row[3]
+        # Populate each sublist with the appropriate value
+        stats[0].append(str(row[0]))
+        scores = [str(wins),str(draws),str(losses)]
+        stats[1].append("/".join(scores))
 
+        if (draws+losses) == 0:
+            win_percentage = 'Infinity!'
+        else:
+            win_percentage = (wins/(draws+losses))*100
+        # Append win percentage to last entry (because it's last)
+        stats[-1].append(str(win_percentage))
+        #response += "\n{0:25} {1:4} {2:4} {3:4} {4:6}".format(name, wins, draws, losses, win_percentage)
+
+    em = discord.Embed(title="Rock Paper Scissors Leaderboard", colour=0x800020)
+    em.add_field(name="Name", value='\n'.join(stats[0]), inline=True)
+    em.add_field(name="W/D/L", value='\n'.join(stats[1]), inline=True)
+    em.add_field(name="Win %", value='\n'.join(stats[-1]), inline=True)
+    await bot.send_message(ctx.message.channel, embed=em)
 
 # Overwatch
 @bot.command(pass_context=True)
@@ -166,5 +233,6 @@ setup.setup_logger()
 
 log = logging.getLogger('BotBoy')
 
+bot.loop.create_task(background_tasks(60))
 bot.run(TOKEN)
 conn.close()
