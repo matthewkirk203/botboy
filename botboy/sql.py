@@ -15,7 +15,7 @@ def sqlize(value):
   return value
 
 #TODO: Implement all the parameters.
-def select(table_name, column_names = "*", condition = None : dict, GROUP = None, HAVING = None, order = None):
+def select(table_name, column_names = "*", condition = None, GROUP = None, HAVING = None, order = None):
   query = "SELECT "
   if column_names == "*":
     query += "*"
@@ -30,14 +30,14 @@ def select(table_name, column_names = "*", condition = None : dict, GROUP = None
     conditions = list()
     for column, value in condition.items():
       conditions.append(column + "=" + sqlize(value))
-    query += "AND ".join[conditions]
+    query += "AND ".join(conditions)
     
   if order != None:
     query += " ORDER BY " + order
     
   return query
   
-def insert(table_name, values, column_names = None):
+def insert(table_name, values:list, column_names = None):
   query = "INSERT INTO " + table_name
   if column_names != None:
     query += " (" + ",".join(column_names) + ")"
@@ -59,7 +59,7 @@ def update(table_name, changing_columns:dict, condition:dict):
   query = "UPDATE " + table_name + " SET "
   sets = []
   for key,value in changing_columns.items():
-    sets.append(key + "=" + sqlize(value))
+    sets.append(key + "=" + value)
   query += ",".join(sets)
   query += " WHERE "
   for k,v in condition.items():

@@ -22,8 +22,8 @@ bot = commands.Bot(command_prefix='!', description=description)
 async def background_tasks(loop_timer):
     await bot.wait_until_ready()
     counter = 0
-    #TODO: Get the channel ID
-    channel = discord.Object(id='channel_id_here')
+    #TODO: Get the channel ID. Right now it is for bot-testing
+    channel = discord.Object(id=430560047295234051)
     while not bot.is_closed:
         counter += 1
         await bot.send_message(channel, counter)
@@ -60,9 +60,14 @@ async def leave():
 @bot.command(pass_context=True)
 async def rps(ctx, player_choice):
     # See if player is already in database. If not, create their entry.
-    member = ctx.message.author
+    member = str(ctx.message.author)
     query = sql.select(rps_table, condition={"DiscordName":member})
-    #TODO: Check and see if any rows are returned. Some research needs to be done.
+    # Store all results from query in a list of tuples
+    results = c.execute(query).fetchall()
+    if len(results) == 0:
+        # Create entry
+        default_values = [member,0,0,0]
+        c.execute(sql.insert(rps_table, default_values))
     
     # Result matrix - columns: player's choice / rows: bot's choice
     result_matrix = [['draw','user','bot'],['bot','draw','user'],['user','bot','draw']]
@@ -86,7 +91,6 @@ async def rps(ctx, player_choice):
     result = result_matrix[bot_choice_index][player_choice_index]
     
     column_update = {}
-    #TODO: Make sure column names are correct.
     if result == "user":
         winner = "You win!"
         column_update = {"Wins":"Wins+1"}
@@ -98,16 +102,23 @@ async def rps(ctx, player_choice):
         column_update = {"Losses":"Losses+1"}
         
     # Update database
-    sql.update(rps_table, column_update, {"DiscordName":member})
+    c.execute(sql.update(rps_table, column_update, {"DiscordName":member}))
     
     # Create response
     response = "You chose: {0} \nBotBoy chose: {1} \n{2}".format(choices[player_choice_index], choices[bot_choice_index], winner)
     query = sql.select(rps_table, condition={"DiscordName":member})
-    for row in c.execute(query):
-        #TODO: look at row results to calculate win %
-        response += "\n" + row
+    results = c.execute(query).fetchone()
+    wins = results[1]
+    draws = results[2]
+    losses = results[3]
+    if (draws+losses) == 0:
+        win_percentage = 'Infinity!'
+    else:
+        win_percentage = (wins/(draws+losses))*100
+    response += "\nWins: " + str(wins) + "\nDraws: " + str(draws) + "\nLosses: " + str(losses) + "\nWin %: " + str(win_percentage) + "%"
     # Say it
     await bot.say(response)
+    conn.commit()
     
 
 
