@@ -6,7 +6,8 @@ import sqlite3
 import sql
 import setup
 import asyncio
-
+import urllib.request
+import overwatch_helpers as owh
 
 # Establish db connection
 db = 'botboy_database.sqlite'
@@ -195,6 +196,10 @@ async def tester(ctx):
     em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF)
     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
     await bot.send_message(ctx.message.channel, embed=em)
+
+@bot.command()
+async def test(battle_tag):
+    owh.get_sr(battle_tag)
 
 
 # Policing
