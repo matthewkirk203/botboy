@@ -134,7 +134,7 @@ async def rps_rank(ctx):
         # Populate each sublist with the appropriate value
         stats[0].append(str(row[0]))
         scores = [str(wins),str(draws),str(losses)]
-        stats[1].append("/".join(scores))
+        stats[1].append(" / ".join(scores))
 
         if (draws+losses) == 0:
             win_percentage = 'Infinity!'
@@ -146,7 +146,7 @@ async def rps_rank(ctx):
 
     em = discord.Embed(title="Rock Paper Scissors Leaderboard", colour=0x800020)
     em.add_field(name="Name", value='\n'.join(stats[0]), inline=True)
-    em.add_field(name="W/D/L", value='\n'.join(stats[1]), inline=True)
+    em.add_field(name="W / D / L", value='\n'.join(stats[1]), inline=True)
     em.add_field(name="Win %", value='\n'.join(stats[-1]), inline=True)
     await bot.send_message(ctx.message.channel, embed=em)
 
