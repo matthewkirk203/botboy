@@ -12,9 +12,11 @@ def get_sr(battle_tag):
 	# If we didn't find it, they are either unranked or the profile doesn't exist
 	#TODO: Figure out how to look for Profile Not Found
 	if comp_div is None:
-		if soup2.find(string="Profile Not Found") is None:
+		#soup = bs4.BeautifulSoup(html.read(),"html.parser")
+		if soup.find('h1') is not None:
 			# Player is unranked
 			sr = -1
+		# A nonexistent profile shows a 404 page when parsed. It's weird.
 		else:
 			# Profile doesn't exist
 			sr = None
@@ -25,6 +27,7 @@ def get_sr(battle_tag):
 	return sr
 
 
-get_sr('RndEarthShil#1735')
-get_sr('icekingsimon#1441')
-get_sr('icekingsimon#14411')
+def test():
+	get_sr('RndEarthShil#1735')
+	get_sr('icekingsimon#1441')
+	get_sr('icekingsimon#14411')
