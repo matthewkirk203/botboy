@@ -202,6 +202,18 @@ async def ow_list():
 
     await bot.say(output)
 
+@bot.command(pass_context=True)
+async def ow_rank(ctx):
+    query = sql.select(overwatch_table, order="SR DESC")
+    em = discord.Embed(title="Overwatch SR Leaderboard", colour=0xFF00FF)
+    rank = 1
+    for row in c.execute(query):
+        name = "#"+str(rank)+" "+row[0]
+        values = ["SR: " + str(row[1]), "@"+row[2]]
+        value = '\n'.join(values)
+        em.add_field(name=name, value=value)
+        rank += 1
+    await bot.send_message(ctx.message.channel, embed=em)
 
 @bot.command(pass_context=True)
 async def tester(ctx):
