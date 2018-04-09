@@ -17,6 +17,7 @@ overwatch_table = "Overwatch"
 rps_table = "RPS"
 
 TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
+server = None
 
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
@@ -36,6 +37,12 @@ async def on_ready():
     log.info('Logged in as: {0}'.format(bot.user.name))
     log.info('ID: {0}'.format(bot.user.id))
     log.info("DB: {0}".format(db))
+    # Get the server the bot's on. Right now it's just getting 
+    # the first one which should hopefully be the one we care about???
+    servers = []
+    [servers.append(x) for x in bot.servers]
+    server = servers[0]
+    log.info('Server: ' + str(server))
 
 
 @bot.command()
@@ -216,14 +223,28 @@ async def ow_rank(ctx):
     await bot.send_message(ctx.message.channel, embed=em)
 
 @bot.command(pass_context=True)
+async def ow_ru(ctx):
+    query = sql.select(overwatch_table)
+    for row in c.execute(query):
+        battle_tag = row[0]
+        sr = owh.get_sr(battle_tag)
+        c.execute(sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag}))
+
+    conn.commit()
+
+@bot.command(pass_context=True)
 async def tester(ctx):
     em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF)
     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
     await bot.send_message(ctx.message.channel, embed=em)
 
-@bot.command()
-async def test(battle_tag):
-    owh.get_sr(battle_tag)
+@bot.command(pass_context=True)
+async def test(ctx):
+    member = ctx.message.author
+    for row in bot.servers:
+        print(row)
+    #role = discord.utils.get(bot.server.roles, name='dumb')
+    #await bot.add_roles(member, role)
 
 
 # Policing
