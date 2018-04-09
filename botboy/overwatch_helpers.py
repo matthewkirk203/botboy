@@ -15,7 +15,7 @@ def get_sr(battle_tag):
 		#soup = bs4.BeautifulSoup(html.read(),"html.parser")
 		if soup.find('h1') is not None:
 			# Player is unranked
-			sr = -1
+			sr = 0
 		# A nonexistent profile shows a 404 page when parsed. It's weird.
 		else:
 			# Profile doesn't exist
@@ -23,7 +23,6 @@ def get_sr(battle_tag):
 	else:
 		sr = comp_div.find("div").contents[0]
 
-	print(sr)
 	return sr
 
 

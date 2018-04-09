@@ -153,7 +153,7 @@ async def rps_rank(ctx):
 
 # Overwatch
 @bot.command(pass_context=True)
-async def ow_add(ctx, battle_tag, member = None):
+async def ow_add(ctx, battle_tag, member : discord.Member = None):
     if member is None:
         member = ctx.message.author
     log.debug(type(member))
@@ -164,7 +164,18 @@ async def ow_add(ctx, battle_tag, member = None):
         await bot.say("ERROR: @mention the user instead of just typing it")
         return
 
-    query = sql.insert(overwatch_table, [battle_tag, str(member)])
+    # See if the battle_tag is already in the db
+    query = sql.select(overwatch_table, column_names=['BattleTag', 'DiscordName'], condition={'BattleTag':battle_tag})
+    if len((c.execute(query)).fetchall()) is not 0:
+        await bot.say("Account " + battle_tag + " already in list!")
+        return
+
+    sr = owh.get_sr(battle_tag)
+    if sr == None:
+        await bot.say("Account " + battle_tag + " doesn't exist!")
+        return
+
+    query = sql.insert(overwatch_table, [battle_tag, sr, str(member)])
     #query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
     #print(query)
     c.execute(query)
@@ -174,14 +185,15 @@ async def ow_add(ctx, battle_tag, member = None):
 
 @bot.command()
 async def ow_list():
-    query = sql.select(overwatch_table)
+    query = sql.select(overwatch_table, order="LOWER(BattleTag)")
     #query = "SELECT * FROM Overwatch"
     tags = []
     for row in c.execute(query):
         battle_tag = row[0]
-        member_name = row[1]
+        sr = row[1]
+        member_name = row[2]
         tags.append([battle_tag, member_name])
-    tags.sort(key=lambda y: y[0].lower())
+    #tags.sort(key=lambda y: y[0].lower())
     log.debug(tags)
     # print(tags)
     output = ''
