@@ -229,8 +229,6 @@ async def ow_ru(ctx):
     for row in c.execute(query):
         battle_tag = row[0]
         sr = str(owh.get_sr(battle_tag))
-        log.info(type(sr))
-        log.info(sr)
         c.execute(sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag}))
 
     conn.commit()
@@ -257,33 +255,35 @@ async def test(ctx):
     role = discord.utils.get(ctx.message.server.roles, name='dumb')
     await bot.add_roles(member, role)
 
-
 async def auto_role_update():
     # TODO: not tested at all
     for server in bot.servers:
         await update_roles(server)
 
-
 async def update_roles(server):
-    log.info("Updating roles - per ow_ru")
-    query = sql.select(overwatch_table)
+    log.info("--- UPDATING ROLES PER SR ---")
+    query = sql.select(overwatch_table, order="SR ASC")
     for row in c.execute(query):
-        # print(server.members.items())
         for member in server.members:
-            print("member")
-            print(str(member))
-            print("row")
-            print(row[2])
             if row[2] == str(member):
                 rank = get_rank(row[1])
-                log.info("Got rank: " + rank)
+                log.debug("SR: {0} -- Rank: {1}".format(row[1], rank))
+                # If player is unranked, don't update their roles
                 if rank == "unranked":
+                    log.info("Member {0} is unranked, not updating role.".format(str(member)))
                     continue
+
                 role = discord.utils.get(server.roles, name=rank)
+                if role in member.roles:
+                    log.info("Member {0} already has role {1} - not updating.".format(str(member), role))
+                    continue
+
+                log.info("Updating member: {0} - with role: {1}".format(str(member), rank))
                 await bot.add_roles(member, role)
+                time.sleep(1)
+                await remove_other_ranks(server, rank, member)
             else:
                 continue
-
 
 def get_rank(sr):
     if sr >= 4000:
@@ -303,6 +303,21 @@ def get_rank(sr):
     elif sr == 0:
         return "unranked"
 
+async def remove_other_ranks(server, rank, member):
+    ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
+    for rank_name in ranks:
+        if rank == rank_name:
+            continue
+        role = discord.utils.get(server.roles, name=rank_name)
+        log.info("Updating member: {0} - removing role: {1}".format(str(member), rank_name)
+        if role == None:
+            log.info("Role {0} does not exist".format(rank_name)))
+            continue
+        if role in member.roles:
+            log.info("REMOVING: {0}".format(str(role)))
+            await bot.remove_roles(member, role)
+        else:
+            log.info("Member does not have role {0} - nothing to remove".format(str(role)))
 
 # Policing
 @bot.listen('on_message')
@@ -328,7 +343,7 @@ async def policer(message):
         # Check if the message has attachments
         if not message.attachments:
             log.debug(message.author)
-            log.info("No attachments found in message")
+            log.debug("No attachments found in message")
             # TODO: get rid of return when we add an await
             # await bot.send_message(message.channel, "You know the rules.")
             return
