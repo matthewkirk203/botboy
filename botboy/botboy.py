@@ -17,7 +17,7 @@ overwatch_table = "Overwatch"
 rps_table = "RPS"
 
 TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
-server = None
+global server
 
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
@@ -160,16 +160,17 @@ async def rps_rank(ctx):
 
 # Overwatch
 @bot.command(pass_context=True)
-async def ow_add(ctx, battle_tag, member : discord.Member = None):
+async def ow_add(ctx, battle_tag, member = None):
     if member is None:
         member = ctx.message.author
     log.debug(type(member))
     log.debug(discord.Member)
+    await bot.send_typing(ctx.message.channel)
     # print(type(member))
     # print(discord.Member)
-    if type(member) is not discord.Member:
-        await bot.say("ERROR: @mention the user instead of just typing it")
-        return
+    # if type(member) is not discord.Member:
+    #     await bot.say("ERROR: @mention the user instead of just typing it")
+    #     return
 
     # See if the battle_tag is already in the db
     query = sql.select(overwatch_table, column_names=['BattleTag', 'DiscordName'], condition={'BattleTag':battle_tag})
@@ -243,8 +244,19 @@ async def test(ctx):
     member = ctx.message.author
     for row in bot.servers:
         print(row)
-    #role = discord.utils.get(bot.server.roles, name='dumb')
-    #await bot.add_roles(member, role)
+
+    servers = []
+    [servers.append(x) for x in bot.servers]
+    server = servers[0]
+
+    role = discord.utils.get(ctx.message.server.roles, name='dumb')
+    await bot.add_roles(member, role)
+
+
+async def update_roles(server, role):
+    for row in bot.servers:
+        role = discord.utils.get(row.roles, name='dumb')
+        await bot.add_roles(member, role)
 
 
 # Policing
