@@ -160,7 +160,7 @@ async def rps_rank(ctx):
 
 # Overwatch
 @bot.command(pass_context=True)
-async def ow_add(ctx, battle_tag, member = None):
+async def ow_add(ctx, battle_tag, member : discord.Member = None):
     if member is None:
         member = ctx.message.author
     log.debug(type(member))
@@ -168,9 +168,9 @@ async def ow_add(ctx, battle_tag, member = None):
     await bot.send_typing(ctx.message.channel)
     # print(type(member))
     # print(discord.Member)
-    # if type(member) is not discord.Member:
-    #     await bot.say("ERROR: @mention the user instead of just typing it")
-    #     return
+    if type(member) is not discord.Member:
+        await bot.say("ERROR: @mention the user instead of just typing it")
+        return
 
     # See if the battle_tag is already in the db
     query = sql.select(overwatch_table, column_names=['BattleTag', 'DiscordName'], condition={'BattleTag':battle_tag})
@@ -228,10 +228,15 @@ async def ow_ru(ctx):
     query = sql.select(overwatch_table)
     for row in c.execute(query):
         battle_tag = row[0]
-        sr = owh.get_sr(battle_tag)
+        sr = str(owh.get_sr(battle_tag))
+        log.info(type(sr))
+        log.info(sr)
         c.execute(sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag}))
 
     conn.commit()
+
+    server = ctx.message.server
+    await update_roles(server)
 
 @bot.command(pass_context=True)
 async def tester(ctx):
@@ -253,10 +258,50 @@ async def test(ctx):
     await bot.add_roles(member, role)
 
 
-async def update_roles(server, role):
-    for row in bot.servers:
-        role = discord.utils.get(row.roles, name='dumb')
-        await bot.add_roles(member, role)
+async def auto_role_update():
+    # TODO: not tested at all
+    for server in bot.servers:
+        await update_roles(server)
+
+
+async def update_roles(server):
+    log.info("Updating roles - per ow_ru")
+    query = sql.select(overwatch_table)
+    for row in c.execute(query):
+        # print(server.members.items())
+        for member in server.members:
+            print("member")
+            print(str(member))
+            print("row")
+            print(row[2])
+            if row[2] == str(member):
+                rank = get_rank(row[1])
+                log.info("Got rank: " + rank)
+                if rank == "unranked":
+                    continue
+                role = discord.utils.get(server.roles, name=rank)
+                await bot.add_roles(member, role)
+            else:
+                continue
+
+
+def get_rank(sr):
+    if sr >= 4000:
+        return "grandmaster"
+    elif sr >= 3500 and sr <= 3999:
+        return "master"
+    elif sr >= 3000 and sr <= 3499:
+        return "diamond"
+    elif sr >= 2500 and sr <= 2999:
+        return "platinum"
+    elif sr >= 2000 and sr <= 2499:
+        return "gold"
+    elif sr >= 1500 and sr <= 1999:
+        return "silver"
+    elif sr >= 1 and sr <= 1499:
+        return "bronze"
+    elif sr == 0:
+        return "unranked"
 
 
 # Policing
