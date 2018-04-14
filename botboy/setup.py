@@ -9,7 +9,7 @@ def setup_logger():
         formatter = logging.Formatter(fmt_str)
 
         sh = logging.StreamHandler()
-        sh.setLevel(logging.DEBUG)
+        sh.setLevel(logging.INFO)
         sh.setFormatter(formatter)
 
         logger.addHandler(sh)

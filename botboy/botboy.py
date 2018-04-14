@@ -1,6 +1,7 @@
 import random
 import discord
 import logging
+import time
 from discord.ext import commands
 import sqlite3
 import sql
@@ -266,22 +267,38 @@ async def update_roles(server):
     for row in c.execute(query):
         for member in server.members:
             if row[2] == str(member):
+                log.info("UPDATING INFO FOR: {0}".format(str(member)))
+
+                # Check if OW account is member's highest SR - is no, continue
+                # main = True
+                # for check_row in c.execute(query):
+                #     # log.info("        CHECKING - row: {0} - check_row: {1}".format(row[2], check_row[2]))
+                #     if row[2] == check_row[2] and row[1] < check_row[1]:
+                #         # log.info("        CAUGHT HIGHER ACCOUNT - member: {0} - SR: {1}".format(check_row[2], check_row[1]))
+                #         main = False
+                #         break
+
+                # if not main:
+                #     log.info("    Member: {0} - Account with SR: {1} - is not main".format(str(member), row[1]))
+                #     continue
+                    
+                # Determine OW rank from SR
                 rank = get_rank(row[1])
-                log.debug("SR: {0} -- Rank: {1}".format(row[1], rank))
-                # If player is unranked, don't update their roles
+                log.info("    SR: {0} -- Rank: {1}".format(row[1], rank))
+                # If member is unranked, don't update role
                 if rank == "unranked":
-                    log.info("Member {0} is unranked, not updating role.".format(str(member)))
+                    log.info("    Member {0} is unranked, not updating role.".format(str(member)))
                     continue
 
                 role = discord.utils.get(server.roles, name=rank)
+                # If member already has this rank, don't update role
                 if role in member.roles:
-                    log.info("Member {0} already has role {1} - not updating.".format(str(member), role))
+                    log.info("    Member {0} already has role: {1} - not updating.".format(str(member), str(role)))
                     continue
 
-                log.info("Updating member: {0} - with role: {1}".format(str(member), rank))
+                log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
                 await bot.add_roles(member, role)
-                time.sleep(1)
-                await remove_other_ranks(server, rank, member)
+                # await remove_other_ranks(server, rank, member)
             else:
                 continue
 
@@ -304,20 +321,26 @@ def get_rank(sr):
         return "unranked"
 
 async def remove_other_ranks(server, rank, member):
+    log.info("    PASSED IN: {0}".format(rank))
     ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
     for rank_name in ranks:
+        # If rank passed in == rank from list, skip removal
         if rank == rank_name:
             continue
+
         role = discord.utils.get(server.roles, name=rank_name)
-        log.info("Updating member: {0} - removing role: {1}".format(str(member), rank_name)
+
+        # If role doesn't exist in server, skip removal
         if role == None:
-            log.info("Role {0} does not exist".format(rank_name)))
+            log.info("    Role {0} does not exist".format(rank_name))
             continue
+
+        # If member has role, remove it
         if role in member.roles:
-            log.info("REMOVING: {0}".format(str(role)))
+            log.info("    Updating member: {0} - removing role: {1}".format(str(member), str(role)))
             await bot.remove_roles(member, role)
         else:
-            log.info("Member does not have role {0} - nothing to remove".format(str(role)))
+            log.info("    Member does not have role {0} - nothing to remove".format(str(role)))
 
 # Policing
 @bot.listen('on_message')
@@ -342,8 +365,8 @@ async def policer(message):
     if message.author != bot.user:
         # Check if the message has attachments
         if not message.attachments:
-            log.debug(message.author)
-            log.debug("No attachments found in message")
+            # log.debug(message.author)
+            # log.debug("No attachments found in message")
             # TODO: get rid of return when we add an await
             # await bot.send_message(message.channel, "You know the rules.")
             return
