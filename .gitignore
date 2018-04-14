@@ -101,4 +101,4 @@ ENV/
 .mypy_cache/
 
 # discord token
-botboy/discord_token
+botboy/discord_token.py
