@@ -9,6 +9,7 @@ import setup
 import asyncio
 import urllib.request
 import overwatch_helpers as owh
+import discord_token
 
 # Establish db connection
 db = 'botboy_database.sqlite'
@@ -17,8 +18,7 @@ c = conn.cursor()
 overwatch_table = "Overwatch"
 rps_table = "RPS"
 
-TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
-global server
+TOKEN = discord_token.botboy_token
 
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
