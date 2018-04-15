@@ -227,13 +227,13 @@ async def ow_rank(ctx):
 @bot.command(pass_context=True)
 async def ow_ru(ctx):
     squery = sql.select(overwatch_table)
-    #TODO: Why does this show only one name? Is that normal?
-    for row in c.execute(squery):
-        print(row)
+    # Because another query occurs in the loop, you have to put the data into an array first.
+    data = c.execute(squery).fetchall()
+    for row in data:
         battle_tag = row[0]
         sr = str(owh.get_sr(battle_tag))
+        log.info("Updating {} to SR: {}".format(battle_tag, sr))
         uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
-        print(uquery)
         c.execute(uquery)
 
     conn.commit()
