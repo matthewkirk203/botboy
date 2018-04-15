@@ -229,6 +229,7 @@ async def ow_ru(ctx):
     squery = sql.select(overwatch_table)
     #TODO: Why does this show only one name? Is that normal?
     for row in c.execute(squery):
+        print(row)
         battle_tag = row[0]
         sr = str(owh.get_sr(battle_tag))
         uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
@@ -307,15 +308,17 @@ async def update_roles(server):
     log.info("--- UPDATING ROLES PER SR ---")
     # Grab distinct members from table
     query = sql.select(overwatch_table, distinct=True, column_names=["DiscordName"])
-    for row in c.execute(query):
-        print("DISCORD NAME:" + str(row))
-        # I'm only selecting the DiscordName with the query, so it will be index 0
-        discord_name = row[0]
-        for member in server.members:
-            # If a member in the table matches a member in the server
-            if discord_name == str(member):
-                log.info("UPDATING INFO FOR: {0}".format(str(member)))
-                await update_role(member, server)
+    data = c.execute(query).fetchall()
+    # Build list of the names for which to check
+    members = [u[0] for u in data]
+    log.info("MEMBERS: " + ','.join(members))
+    # Build list of requests to update_role
+    # Need to use server.get_member_named() because discord.utils.get doesn't work with 
+    # discord member names if you pass in the # part. This way is more robust.
+    # If a person doesn't exist in the table, it pretty gracefully skips it.
+    requests = [update_role(server.get_member_named(member), server) for member in members]
+    # Asynchronously perform all calls.
+    await asyncio.wait(requests)
 
 def get_rank(sr):
     if sr >= 4000:
