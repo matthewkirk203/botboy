@@ -292,6 +292,8 @@ async def update_role(member, server):
     # If member is unranked, don't update role
     if rank == "unranked":
         log.info("    Member {0} is unranked, not updating role.".format(str(member)))
+        #TODO: This should actually remove all overwatch related roles
+        # await remove_other_ranks(server, rank, member)
         return
 
     role = discord.utils.get(server.roles, name=rank)
@@ -341,6 +343,14 @@ def get_rank(sr):
 async def remove_other_ranks(server, rank, member):
     log.info("    PASSED IN: {0}".format(rank))
     ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
+    if rank == 'unranked':
+        # Remove all ranks
+        log.info("Player {} is unranked. Removing all ranks.".format(member))
+        for rank_name in ranks:
+            role = discord.utils.get(server.roles, name=rank_name)
+            await bot.remove_roles(member, role)
+        return
+
     for rank_name in ranks:
         # If rank passed in == rank from list, skip removal
         if rank == rank_name:
