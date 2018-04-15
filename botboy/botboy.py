@@ -226,13 +226,14 @@ async def ow_rank(ctx):
 
 @bot.command(pass_context=True)
 async def ow_ru(ctx):
-    query = sql.select(overwatch_table)
-    for row in c.execute(query):
+    squery = sql.select(overwatch_table)
+    #TODO: Why does this show only one name? Is that normal?
+    for row in c.execute(squery):
         battle_tag = row[0]
         sr = str(owh.get_sr(battle_tag))
-        query = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
-        print(query)
-        c.execute(query)
+        uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
+        print(uquery)
+        c.execute(uquery)
 
     conn.commit()
 
@@ -263,8 +264,9 @@ async def auto_role_update():
     for server in bot.servers:
         await update_roles(server)
 
-async def update_role(member):
+async def update_role(member, server):
     """ Update a single role for the given member """
+    log.info("Updating role for " + str(member))
     sr = 0
     # Get a list of all entries for member
     query = sql.select(overwatch_table, order="SR DESC", condition={"DiscordName":str(member)})
@@ -300,21 +302,20 @@ async def update_role(member):
     log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
     await bot.add_roles(member, role)
     # await remove_other_ranks(server, rank, member)
-    else:
-        return
 
 async def update_roles(server):
     log.info("--- UPDATING ROLES PER SR ---")
     # Grab distinct members from table
-    query = sql.select(overwatch_table, distinct=True, column_names="DiscordName")
+    query = sql.select(overwatch_table, distinct=True, column_names=["DiscordName"])
     for row in c.execute(query):
+        print("DISCORD NAME:" + str(row))
         # I'm only selecting the DiscordName with the query, so it will be index 0
         discord_name = row[0]
         for member in server.members:
             # If a member in the table matches a member in the server
             if discord_name == str(member):
                 log.info("UPDATING INFO FOR: {0}".format(str(member)))
-                update_role(member)
+                await update_role(member, server)
 
 def get_rank(sr):
     if sr >= 4000:
