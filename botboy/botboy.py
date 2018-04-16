@@ -267,45 +267,33 @@ async def auto_role_update():
 
 async def update_role(member, server):
     """ Update a single role for the given member """
-    log.info("Updating role for " + str(member))
+    log.info("Beginning role update for " + str(member))
     sr = 0
     # Get a list of all entries for member
     query = sql.select(overwatch_table, order="SR DESC", condition={"DiscordName":str(member)})
-    # Put into a list
+    # Determine highest SR for member
     data = c.execute(query).fetchall()
     if len(data) < 1:
         # Member doesn't exist in table
         log.info("Member " + str(member) + " doesn't exist in table!")
         return
-    elif len(data) == 1:
-        # Their SR is the first row, second column
-        log.info("Only one account assigned. Using that one.")
-        sr = data[0][1]
-    elif len(data) > 1:
-        # Still the first row, second column, but we are using the highst for them.
-        log.info("Multiple accounts exists. Using highest.")
+    else:
+        log.info("Using highest SR for {}".format(member))
         sr = data[0][1]
 
-     # Determine OW rank from SR
+    # Determine OW rank from SR
     rank = get_rank(sr)
     log.info("    SR: {0} -- Rank: {1}".format(sr, rank))
     log.info("---REMOVING RANKS for {}---".format(member))
     await remove_other_ranks(server, rank, member)
     # If member is unranked, don't update role
     if rank == "unranked":
-        log.info("    Member {0} is unranked, not updating role.".format(str(member)))
-        #TODO: This should actually remove all overwatch related roles
-        # await remove_other_ranks(server, rank, member)
+        log.info("    Member {0} is unranked, no role assigned.".format(str(member)))
         return
-
-    role = discord.utils.get(server.roles, name=rank)
-    # If member already has this rank, don't update role
-    if role in member.roles:
-        log.info("    Member {0} already has role: {1} - not updating.".format(str(member), str(role)))
-        return
-
-    log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
-    await bot.add_roles(member, role)
+    else:
+        role = discord.utils.get(server.roles, name=rank)
+        log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
+        await bot.add_roles(member, role)
 
 async def update_roles(server):
     log.info("--- UPDATING ROLES PER SR ---")
