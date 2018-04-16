@@ -226,6 +226,7 @@ async def ow_rank(ctx):
 
 @bot.command(pass_context=True)
 async def ow_ru(ctx):
+    await bot.send_typing(ctx.message.channel)
     squery = sql.select(overwatch_table)
     # Because another query occurs in the loop, you have to put the data into an array first.
     data = c.execute(squery).fetchall()
@@ -240,6 +241,7 @@ async def ow_ru(ctx):
 
     server = ctx.message.server
     await update_roles(server)
+    await bot.say("Done updating roles!")
 
 @bot.command(pass_context=True)
 async def tester(ctx):
@@ -296,6 +298,7 @@ async def update_role(member, server):
         await bot.add_roles(member, role)
 
 async def update_roles(server):
+
     log.info("--- UPDATING ROLES PER SR ---")
     # Grab distinct members from table
     query = sql.select(overwatch_table, distinct=True, column_names=["DiscordName"])
