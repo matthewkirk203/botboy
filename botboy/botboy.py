@@ -58,17 +58,19 @@ async def add(left : int, right : int):
     await bot.say(left + right)
 
 
-@bot.command()
-async def leave():
-    conn.close()
-    await bot.say("Bye!")
-    await bot.logout()
-    quit()
+# @bot.command()
+# async def gtfo():
+#     """Makes Botboy leave (go offline)"""
+#     conn.close()
+#     await bot.say("Bye!")
+#     await bot.logout()
+#     quit()
 
 
 # Rock Paper Scissors
 @bot.command(pass_context=True)
 async def rps(ctx, player_choice):
+    """Play rock, paper, scissors against Botboy (eg. !rps r)"""
     # See if player is already in database. If not, create their entry.
     member = str(ctx.message.author)
     query = sql.select(rps_table, condition={"DiscordName":member})
@@ -129,6 +131,7 @@ async def rps(ctx, player_choice):
     
 @bot.command(pass_context=True)
 async def rps_rank(ctx):
+    """Rank rps players by # of wins"""
     query = sql.select(rps_table, order="Wins DESC")
     #response = "{0:25} {1:4} {2:4} {3:4} {4:6}".format('Name', 'Wins', 'Draws', 'Losses', 'Win%')
     # Create a list of lists that is Name Wins Draws Losses Win%
@@ -156,6 +159,7 @@ async def rps_rank(ctx):
 # Overwatch
 @bot.command(pass_context=True)
 async def ow_add(ctx, battle_tag, member : discord.Member = None):
+    """Add an Overwatch player to the database (e.g. !ow_add JeffKaplan#420 @JeffKaplan)"""
     if member is None:
         member = ctx.message.author
     log.debug(type(member))
@@ -188,6 +192,7 @@ async def ow_add(ctx, battle_tag, member : discord.Member = None):
 
 @bot.command()
 async def ow_list():
+    """List players in Overwatch database"""
     query = sql.select(overwatch_table, order="LOWER(BattleTag)")
     #query = "SELECT * FROM Overwatch"
     tags = []
@@ -207,6 +212,7 @@ async def ow_list():
 
 @bot.command(pass_context=True)
 async def ow_rank(ctx):
+    """Rank Overwatch players in database by SR"""
     query = sql.select(overwatch_table, order="SR DESC")
     em = discord.Embed(title="Overwatch SR Leaderboard", colour=0xFF00FF)
     rank = 1
@@ -220,6 +226,7 @@ async def ow_rank(ctx):
 
 @bot.command(pass_context=True)
 async def ow_ru(ctx):
+    """Update Discord users' roles according to Overwatch SR"""
     await bot.send_typing(ctx.message.channel)
     squery = sql.select(overwatch_table)
     # Because another query occurs in the loop, you have to put the data into an array first.
@@ -237,17 +244,18 @@ async def ow_ru(ctx):
     await update_roles(server)
     await bot.say("Done updating roles!")
 
-@bot.command(pass_context=True)
-async def tester(ctx):
-    em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF)
-    em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
-    await bot.send_message(ctx.message.channel, embed=em)
+# @bot.command(pass_context=True)
+# async def tester(ctx):
+#     em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF)
+#     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
+#     await bot.send_message(ctx.message.channel, embed=em)
 
 @bot.command(pass_context=True)
 async def test(ctx):
+    """A test for dummies"""
     member = ctx.message.author
-    for row in bot.servers:
-        print(row)
+    # for row in bot.servers:
+    #     print(row)
 
     servers = []
     [servers.append(x) for x in bot.servers]
@@ -369,6 +377,6 @@ setup.setup_logger()
 
 log = logging.getLogger('BotBoy')
 
-bot.loop.create_task(background_tasks(60))
+# bot.loop.create_task(background_tasks(60))
 bot.run(TOKEN)
 conn.close()
