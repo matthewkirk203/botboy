@@ -15,8 +15,10 @@ def sqlize(value):
   return value
 
 #TODO: Implement all the parameters.
-def select(table_name, column_names = "*", condition = None, GROUP = None, HAVING = None, order = None):
+def select(table_name, distinct = False, column_names = "*", condition = None, GROUP = None, HAVING = None, order = None):
   query = "SELECT "
+  if distinct is True:
+    query += "DISTINCT "
   if column_names == "*":
     query += "*"
   else:

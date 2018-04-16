@@ -1,12 +1,15 @@
 import random
 import discord
 import logging
+import time
 from discord.ext import commands
 import sqlite3
 import sql
 import setup
 import asyncio
-
+import urllib.request
+import overwatch_helpers as owh
+import discord_token
 
 # Establish db connection
 db = 'botboy_database.sqlite'
@@ -15,7 +18,7 @@ c = conn.cursor()
 overwatch_table = "Overwatch"
 rps_table = "RPS"
 
-TOKEN = 'NDMwNTU3MTAxNDU1MDQ4NzE2.DaR7XQ.A_K3I6ULvana5W32H312GdBnZ2A'
+TOKEN = discord_token.botboy_token
 
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
@@ -35,6 +38,12 @@ async def on_ready():
     log.info('Logged in as: {0}'.format(bot.user.name))
     log.info('ID: {0}'.format(bot.user.id))
     log.info("DB: {0}".format(db))
+    # Get the server the bot's on. Right now it's just getting 
+    # the first one which should hopefully be the one we care about???
+    servers = []
+    [servers.append(x) for x in bot.servers]
+    server = servers[0]
+    log.info('Server: ' + str(server))
 
 
 @bot.command()
@@ -146,18 +155,30 @@ async def rps_rank(ctx):
 
 # Overwatch
 @bot.command(pass_context=True)
-async def ow_add(ctx, battle_tag, member = None):
+async def ow_add(ctx, battle_tag, member : discord.Member = None):
     if member is None:
         member = ctx.message.author
     log.debug(type(member))
     log.debug(discord.Member)
+    await bot.send_typing(ctx.message.channel)
     # print(type(member))
     # print(discord.Member)
     if type(member) is not discord.Member:
         await bot.say("ERROR: @mention the user instead of just typing it")
         return
 
-    query = sql.insert(overwatch_table, [battle_tag, str(member)])
+    # See if the battle_tag is already in the db
+    query = sql.select(overwatch_table, column_names=['BattleTag', 'DiscordName'], condition={'BattleTag':battle_tag})
+    if len((c.execute(query)).fetchall()) is not 0:
+        await bot.say("Account " + battle_tag + " already in list!")
+        return
+
+    sr = owh.get_sr(battle_tag)
+    if sr == None:
+        await bot.say("Account " + battle_tag + " doesn't exist!")
+        return
+
+    query = sql.insert(overwatch_table, [battle_tag, sr, str(member)])
     #query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
     #print(query)
     c.execute(query)
@@ -167,14 +188,15 @@ async def ow_add(ctx, battle_tag, member = None):
 
 @bot.command()
 async def ow_list():
-    query = sql.select(overwatch_table)
+    query = sql.select(overwatch_table, order="LOWER(BattleTag)")
     #query = "SELECT * FROM Overwatch"
     tags = []
     for row in c.execute(query):
         battle_tag = row[0]
-        member_name = row[1]
+        sr = row[1]
+        member_name = row[2]
         tags.append([battle_tag, member_name])
-    tags.sort(key=lambda y: y[0].lower())
+    #tags.sort(key=lambda y: y[0].lower())
     log.debug(tags)
     # print(tags)
     output = ''
@@ -183,6 +205,37 @@ async def ow_list():
 
     await bot.say(output)
 
+@bot.command(pass_context=True)
+async def ow_rank(ctx):
+    query = sql.select(overwatch_table, order="SR DESC")
+    em = discord.Embed(title="Overwatch SR Leaderboard", colour=0xFF00FF)
+    rank = 1
+    for row in c.execute(query):
+        name = "#"+str(rank)+" "+row[0]
+        values = ["SR: " + str(row[1]), "@"+row[2]]
+        value = '\n'.join(values)
+        em.add_field(name=name, value=value)
+        rank += 1
+    await bot.send_message(ctx.message.channel, embed=em)
+
+@bot.command(pass_context=True)
+async def ow_ru(ctx):
+    await bot.send_typing(ctx.message.channel)
+    squery = sql.select(overwatch_table)
+    # Because another query occurs in the loop, you have to put the data into an array first.
+    data = c.execute(squery).fetchall()
+    for row in data:
+        battle_tag = row[0]
+        sr = str(owh.get_sr(battle_tag))
+        log.info("Updating {} to SR: {}".format(battle_tag, sr))
+        uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
+        c.execute(uquery)
+
+    conn.commit()
+
+    server = ctx.message.server
+    await update_roles(server)
+    await bot.say("Done updating roles!")
 
 @bot.command(pass_context=True)
 async def tester(ctx):
@@ -190,6 +243,95 @@ async def tester(ctx):
     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
     await bot.send_message(ctx.message.channel, embed=em)
 
+@bot.command(pass_context=True)
+async def test(ctx):
+    member = ctx.message.author
+    for row in bot.servers:
+        print(row)
+
+    servers = []
+    [servers.append(x) for x in bot.servers]
+    server = servers[0]
+
+    role = discord.utils.get(ctx.message.server.roles, name='dumb')
+    await bot.add_roles(member, role)
+
+async def auto_role_update():
+    # TODO: not tested at all
+    for server in bot.servers:
+        await update_roles(server)
+
+async def update_role(member, server):
+    """ Update a single role for the given member """
+    log.info("Beginning role update for " + str(member))
+    sr = 0
+    # Get a list of all entries for member
+    query = sql.select(overwatch_table, order="SR DESC", condition={"DiscordName":str(member)})
+    # Determine highest SR for member
+    data = c.execute(query).fetchall()
+    if len(data) < 1:
+        # Member doesn't exist in table
+        log.info("Member " + str(member) + " doesn't exist in table!")
+        return
+    else:
+        log.info("Using highest SR for {}".format(member))
+        sr = data[0][1]
+
+    # Determine OW rank from SR
+    rank = get_rank(sr)
+    log.info("    SR: {0} -- Rank: {1}".format(sr, rank))
+    log.info("---REMOVING RANKS for {}---".format(member))
+    await remove_other_ranks(server, rank, member)
+    # If member is unranked, don't update role
+    if rank == "unranked":
+        log.info("    Member {0} is unranked, no role assigned.".format(str(member)))
+        return
+    else:
+        role = discord.utils.get(server.roles, name=rank)
+        log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
+        await bot.add_roles(member, role)
+
+async def update_roles(server):
+
+    log.info("--- UPDATING ROLES PER SR ---")
+    # Grab distinct members from table
+    query = sql.select(overwatch_table, distinct=True, column_names=["DiscordName"])
+    data = c.execute(query).fetchall()
+    # Build list of the names for which to check
+    members = [u[0] for u in data]
+    log.info("MEMBERS: " + ','.join(members))
+    # Build list of requests to update_role
+    # Need to use server.get_member_named() because discord.utils.get doesn't work with 
+    # discord member names if you pass in the # part. This way is more robust.
+    # If a person doesn't exist in the table, it pretty gracefully skips it.
+    requests = [update_role(server.get_member_named(member), server) for member in members]
+    # Asynchronously perform all calls.
+    await asyncio.wait(requests)
+
+def get_rank(sr):
+    if sr >= 4000:
+        return "grandmaster"
+    elif sr >= 3500 and sr <= 3999:
+        return "master"
+    elif sr >= 3000 and sr <= 3499:
+        return "diamond"
+    elif sr >= 2500 and sr <= 2999:
+        return "platinum"
+    elif sr >= 2000 and sr <= 2499:
+        return "gold"
+    elif sr >= 1500 and sr <= 1999:
+        return "silver"
+    elif sr >= 1 and sr <= 1499:
+        return "bronze"
+    elif sr == 0:
+        return "unranked"
+
+async def remove_other_ranks(server, rank, member):
+    log.info("    PASSED IN: {0}".format(rank))
+    ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
+    # Build list to remove all rank roles.
+    roles = [discord.utils.get(server.roles, name=rank_name) for rank_name in ranks]
+    await bot.remove_roles(member, *roles)
 
 # Policing
 @bot.listen('on_message')
@@ -214,8 +356,8 @@ async def policer(message):
     if message.author != bot.user:
         # Check if the message has attachments
         if not message.attachments:
-            log.debug(message.author)
-            log.info("No attachments found in message")
+            # log.debug(message.author)
+            # log.debug("No attachments found in message")
             # TODO: get rid of return when we add an await
             # await bot.send_message(message.channel, "You know the rules.")
             return
