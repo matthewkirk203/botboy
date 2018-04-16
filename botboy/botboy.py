@@ -289,6 +289,8 @@ async def update_role(member, server):
      # Determine OW rank from SR
     rank = get_rank(sr)
     log.info("    SR: {0} -- Rank: {1}".format(sr, rank))
+    log.info("---REMOVING RANKS for {}---".format(member))
+    await remove_other_ranks(server, rank, member)
     # If member is unranked, don't update role
     if rank == "unranked":
         log.info("    Member {0} is unranked, not updating role.".format(str(member)))
@@ -304,7 +306,6 @@ async def update_role(member, server):
 
     log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
     await bot.add_roles(member, role)
-    # await remove_other_ranks(server, rank, member)
 
 async def update_roles(server):
     log.info("--- UPDATING ROLES PER SR ---")
@@ -343,32 +344,9 @@ def get_rank(sr):
 async def remove_other_ranks(server, rank, member):
     log.info("    PASSED IN: {0}".format(rank))
     ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
-    if rank == 'unranked':
-        # Remove all ranks
-        log.info("Player {} is unranked. Removing all ranks.".format(member))
-        for rank_name in ranks:
-            role = discord.utils.get(server.roles, name=rank_name)
-            await bot.remove_roles(member, role)
-        return
-
-    for rank_name in ranks:
-        # If rank passed in == rank from list, skip removal
-        if rank == rank_name:
-            continue
-
-        role = discord.utils.get(server.roles, name=rank_name)
-
-        # If role doesn't exist in server, skip removal
-        if role == None:
-            log.info("    Role {0} does not exist".format(rank_name))
-            continue
-
-        # If member has role, remove it
-        if role in member.roles:
-            log.info("    Updating member: {0} - removing role: {1}".format(str(member), str(role)))
-            await bot.remove_roles(member, role)
-        else:
-            log.info("    Member does not have role {0} - nothing to remove".format(str(role)))
+    # Build list to remove all rank roles.
+    roles = [discord.utils.get(server.roles, name=rank_name) for rank_name in ranks]
+    await bot.remove_roles(member, *roles)
 
 # Policing
 @bot.listen('on_message')
