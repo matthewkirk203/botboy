@@ -18,6 +18,8 @@ c = conn.cursor()
 overwatch_table = "Overwatch"
 rps_table = "RPS"
 
+ow_roles = {}
+
 TOKEN = discord_token.botboy_token
 
 description = '''BotBoy is here'''
@@ -44,6 +46,11 @@ async def on_ready():
     [servers.append(x) for x in bot.servers]
     server = servers[0]
     log.info('Server: ' + str(server))
+
+    # Compile list of OW roles per server, in a dictionary
+    ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
+    for serv in servers:
+        ow_roles[serv] = [discord.utils.get(serv.roles, name=rank_name) for rank_name in ranks]
 
 
 @bot.command()
@@ -269,9 +276,10 @@ async def auto_role_update():
     for server in bot.servers:
         await update_roles(server)
 
+# Update OW roles for given member in given server
 async def update_role(member, server):
     """ Update a single role for the given member """
-    log.info("Beginning role update for " + str(member))
+    log.info("--- UPDATING ROLES for {} ---".format(member))
     sr = 0
     # Get a list of all entries for member
     query = sql.select(overwatch_table, order="SR DESC", condition={"DiscordName":str(member)})
@@ -279,26 +287,35 @@ async def update_role(member, server):
     data = c.execute(query).fetchall()
     if len(data) < 1:
         # Member doesn't exist in table
-        log.info("Member " + str(member) + " doesn't exist in table!")
+        log.info("    Member " + str(member) + " doesn't exist in table!")
         return
     else:
-        log.info("Using highest SR for {}".format(member))
+        log.info("    Using highest SR for {}".format(member))
         sr = data[0][1]
 
     # Determine OW rank from SR
     rank = get_rank(sr)
     log.info("    SR: {0} -- Rank: {1}".format(sr, rank))
-    log.info("---REMOVING RANKS for {}---".format(member))
-    await remove_other_ranks(server, rank, member)
-    # If member is unranked, don't update role
-    if rank == "unranked":
-        log.info("    Member {0} is unranked, no role assigned.".format(str(member)))
-        return
-    else:
-        role = discord.utils.get(server.roles, name=rank)
-        log.info("    Updating member: {0} - with role: {1}".format(str(member), str(role)))
-        await bot.add_roles(member, role)
 
+    # Replace roles implementation here    
+    new_roles = member.roles
+    # Remove all OW related roles from list of member's roles
+    for role in ow_roles[server]:
+        if role in new_roles:
+            log.info("    Removing role {0}".format(role))
+            new_roles.remove(role)
+
+    # If player is unranked, don't assign any new roles, otherwise append the correct role
+    if rank == "unranked":
+        log.info("    Member {0} is unranked, no new role assigned.".format(str(member)))
+    else:
+        log.info("    Giving member role: {0}".format(rank))
+        new_roles.append(discord.utils.get(server.roles, name=rank))
+
+    # Replace roles accordingly
+    await bot.replace_roles(member, *new_roles)
+
+# Update OW roles in the given server
 async def update_roles(server):
 
     log.info("--- UPDATING ROLES PER SR ---")
@@ -312,7 +329,14 @@ async def update_roles(server):
     # Need to use server.get_member_named() because discord.utils.get doesn't work with 
     # discord member names if you pass in the # part. This way is more robust.
     # If a person doesn't exist in the table, it pretty gracefully skips it.
-    requests = [update_role(server.get_member_named(member), server) for member in members]
+    # requests = [update_role(server.get_member_named(member), server) for member in members]
+    requests = []
+    for member in members:
+        discord_member = server.get_member_named(member)
+        if discord_member is None:
+            log.warning("Member {0} does not exist in server".format(member))
+        else:
+            requests.append(update_role(discord_member, server))
     # Asynchronously perform all calls.
     await asyncio.wait(requests)
 
