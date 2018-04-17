@@ -308,7 +308,7 @@ async def update_role(member, server):
             log.info("    Removing role {0}".format(role))
             new_roles.remove(role)
 
-    # If player is unranked, so assign any new roles, otherwise append the correct role
+    # If player is unranked, don't assign any new roles, otherwise append the correct role
     if rank == "unranked":
         log.info("    Member {0} is unranked, no new role assigned.".format(str(member)))
     else:
