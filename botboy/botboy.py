@@ -279,9 +279,6 @@ async def auto_role_update():
 # Update OW roles for given member in given server
 async def update_role(member, server):
     """ Update a single role for the given member """
-    if member is None:
-        log.warning("WARNING: member ")
-        return
     log.info("--- UPDATING ROLES for {} ---".format(member))
     sr = 0
     # Get a list of all entries for member
