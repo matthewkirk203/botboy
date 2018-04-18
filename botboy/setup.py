@@ -13,10 +13,10 @@ def setup_logger():
             fh = logging.FileHandler(log_path)
             fh.setLevel(logging.DEBUG)
             fh.setFormatter(formatter)
+            logger.addHandler(fh)
 
         sh = logging.StreamHandler()
         sh.setLevel(logging.INFO)
         sh.setFormatter(formatter)
 
         logger.addHandler(sh)
-        logger.addHandler(fh)
