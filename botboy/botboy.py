@@ -65,13 +65,13 @@ async def add(left : int, right : int):
     await bot.say(left + right)
 
 
-# @bot.command()
-# async def gtfo():
-#     """Makes Botboy leave (go offline)"""
-#     conn.close()
-#     await bot.say("Bye!")
-#     await bot.logout()
-#     quit()
+@bot.command()
+async def gtfo():
+    """Makes Botboy leave (go offline)"""
+    conn.close()
+    await bot.say("Bye!")
+    await bot.logout()
+    quit()
 
 
 # Rock Paper Scissors
@@ -184,7 +184,7 @@ async def ow_add(ctx, battle_tag, member : discord.Member = None):
         await bot.say("Account " + battle_tag + " already in list!")
         return
 
-    sr = owh.get_sr(battle_tag)
+    sr = await owh.get_sr(battle_tag)
     if sr == None:
         await bot.say("Account " + battle_tag + " doesn't exist!")
         return
@@ -240,7 +240,7 @@ async def ow_ru(ctx):
     data = c.execute(squery).fetchall()
     for row in data:
         battle_tag = row[0]
-        sr = str(owh.get_sr(battle_tag))
+        sr = str(await owh.get_sr(battle_tag))
         log.info("Updating {} to SR: {}".format(battle_tag, sr))
         uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
         c.execute(uquery)
@@ -336,9 +336,10 @@ async def update_roles(server):
         if discord_member is None:
             log.warning("Member {0} does not exist in server".format(member))
         else:
-            requests.append(update_role(discord_member, server))
+            # requests.append(update_role(discord_member, server))
+            await update_role(discord_member, server)
     # Asynchronously perform all calls.
-    await asyncio.wait(requests)
+    # await asyncio.wait(requests)
 
 def get_rank(sr):
     if sr >= 4000:

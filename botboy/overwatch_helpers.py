@@ -1,13 +1,17 @@
 from urllib.request import urlopen
+import aiohttp
 import bs4
 
-def get_sr(battle_tag):
+async def get_sr(battle_tag):
 	base_url = 'https://playoverwatch.com/en-us/career/pc/'
 	battle_tag = battle_tag.split("#")
 	battle_tag = "-".join(battle_tag)
 	player_url = base_url + battle_tag
-	html = urlopen(player_url)
-	soup = bs4.BeautifulSoup(html.read(), "html.parser")
+	async with aiohttp.ClientSession() as session:
+		async with session.get(player_url) as r:
+			html = await r.text()
+	# html = urlopen(player_url)
+	soup = bs4.BeautifulSoup(html, "html.parser")
 	comp_div = soup.find("div", class_="competitive-rank")
 	# If we didn't find it, they are either unranked or the profile doesn't exist
 	#TODO: Figure out how to look for Profile Not Found
