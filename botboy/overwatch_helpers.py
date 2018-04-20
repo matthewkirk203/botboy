@@ -9,7 +9,8 @@ async def get_sr(battle_tag):
     player_url = base_url + battle_tag
     async with aiohttp.ClientSession() as session:
         async with session.get(player_url) as r:
-            html = await r.text()
+            print("Fetching page for {}".format(battle_tag))
+            html = await r.read()
     # html = urlopen(player_url)
     soup = bs4.BeautifulSoup(html, "html.parser")
     comp_div = soup.find("div", class_="competitive-rank")
