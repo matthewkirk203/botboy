@@ -238,18 +238,24 @@ async def ow_ru(ctx):
     squery = sql.select(overwatch_table)
     # Because another query occurs in the loop, you have to put the data into an array first.
     data = c.execute(squery).fetchall()
-    for row in data:
-        battle_tag = row[0]
-        sr = str(await owh.get_sr(battle_tag))
-        log.info("Updating {} to SR: {}".format(battle_tag, sr))
-        uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
-        c.execute(uquery)
 
+    # Build list of requests
+    tasks = [update_sr(row[0]) for row in data]
+    await asyncio.wait(tasks)
     conn.commit()
 
     server = ctx.message.server
     await update_roles(server)
     await bot.say("Done updating roles!")
+
+async def update_sr(battle_tag):
+    """Does something like this already exist???"""
+    sr = str(await owh.get_sr(battle_tag))
+    log.info("Updating {} to SR: {}".format(battle_tag, sr))
+    uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
+    c.execute(uquery)    
+
+
 
 # @bot.command(pass_context=True)
 # async def tester(ctx):
