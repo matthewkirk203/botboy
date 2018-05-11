@@ -240,7 +240,9 @@ async def ow_ru(ctx):
     data = c.execute(squery).fetchall()
 
     # Build list of requests
+    print("Building tasks")
     tasks = [update_sr(row[0]) for row in data]
+    print("asyncio.wait on tasks")
     await asyncio.wait(tasks)
     conn.commit()
 

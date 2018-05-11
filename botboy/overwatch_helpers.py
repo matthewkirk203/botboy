@@ -11,13 +11,12 @@ async def get_sr(battle_tag):
         async with session.get(player_url) as r:
             print("Fetching page for {}".format(battle_tag))
             html = await r.read()
-    # html = urlopen(player_url)
-    soup = bs4.BeautifulSoup(html, "html.parser")
+    print("Scraping page for {}".format(battle_tag))
+    soup = bs4.BeautifulSoup(html, "lxml")
     comp_div = soup.find("div", class_="competitive-rank")
     # If we didn't find it, they are either unranked or the profile doesn't exist
     #TODO: Figure out how to look for Profile Not Found
     if comp_div is None:
-        #soup = bs4.BeautifulSoup(html.read(),"html.parser")
         if soup.find('h1') is not None:
             # Player is unranked
             sr = 0
@@ -29,7 +28,6 @@ async def get_sr(battle_tag):
         sr = comp_div.find("div").contents[0]
 
     return sr
-
 
 def test():
     get_sr('RndEarthShil#1735')
