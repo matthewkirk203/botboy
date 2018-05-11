@@ -340,6 +340,7 @@ async def update_roles(server):
     # requests = [update_role(server.get_member_named(member), server) for member in members]
     requests = []
     for member in members:
+        await asyncio.sleep(.5)
         discord_member = server.get_member_named(member)
         if discord_member is None:
             log.warning("Member {0} does not exist in server".format(member))
