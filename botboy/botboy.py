@@ -10,6 +10,7 @@ import asyncio
 import urllib.request
 import overwatch_helpers as owh
 import discord_token
+import json
 
 # Establish db connection
 db = 'botboy_database.sqlite'
@@ -241,9 +242,9 @@ async def ow_ru(ctx):
 
     # Build list of requests
     print("Building tasks")
-    tasks = [update_sr(row[0]) for row in data]
-    print("asyncio.wait on tasks")
-    await asyncio.wait(tasks)
+    tasks = [asyncio.ensure_future(update_sr(row[0])) for row in data]
+    print("asyncio.gather on tasks")
+    await asyncio.gather(*tasks)
     conn.commit()
 
     server = ctx.message.server
