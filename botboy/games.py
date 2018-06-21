@@ -1,6 +1,8 @@
 import asyncio
+import random
 
 class Game:
+	self.number_of_players = 0
 	def reset(self):
 		"reset all things to default"
 
@@ -14,15 +16,19 @@ class Game:
 		"start the game with the players that have joined"
 		"this should DM each player their hand"
 
-
-class TexasHoldEm(Game):
-
-	default_deck = 'all the cards'
-
-	def __init__(self):
-		self.deck = 'array of all the cards here' # ['A♠', '2♠', '3♠'... etc]*5
+class CardGame(Game):
+	def __init__(self,number_of_decks=1):
+		card_values = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']
+		card_suits = ['♥','♦','♣','♠']
+		self.deck = [v+s for v in card_values for s in card_suits]
+		self.deck = self.deck*number_of_decks
+		random.shuffle(self.deck)
 		self.game_started = False
 
+class TexasHoldEm(CardGame):
+	def __init__(self,number_of_decks=1):
+		CardGame(self,number_of_decks)
+	
 	def fold(self, player):
 		"fold the player that issued this command"
 
@@ -34,6 +40,14 @@ class TexasHoldEm(Game):
 
 	def check(self, player):
 		"basically a pass"
+		
+class Idiot(CardGame):
+	def __init__(self,number_of_decks=1):
+		CardGame(self,number_of_decks)
+		
+	
+		
+	
 
 
 
