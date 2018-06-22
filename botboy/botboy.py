@@ -253,6 +253,8 @@ async def ow_ru(ctx):
 
 async def update_sr(battle_tag):
     """Does something like this already exist???"""
+    # I think the site is rate-limiting us. This should slow down requests?
+    asyncio.sleep(1)
     sr = str(await owh.get_sr(battle_tag))
     log.info("Updating {} to SR: {}".format(battle_tag, sr))
     uquery = sql.update(overwatch_table, {"SR":sr}, condition={"BattleTag":battle_tag})
