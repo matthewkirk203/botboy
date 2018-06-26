@@ -43,6 +43,17 @@ class CardGame(Game):
 		self.deck = self.deck*number_of_decks
 		random.shuffle(self.deck)
 		self.game_started = False
+		
+	def draw(num_cards=1):
+		cards = list()
+		for i in xrange(num_cards):
+			cards.append(self.deck.pop())
+		if len(cards) == 1: # should we just return a size 1 list?
+			return cards[0]
+		elif len(cards) > 1:
+			return cards
+		else: # Deck is empty?
+			return None
 
 class TexasHoldEm(CardGame):
 	def __init__(self,number_of_decks=1):
@@ -60,9 +71,22 @@ class TexasHoldEm(CardGame):
 	def check(self, player):
 		"basically a pass"
 		
+classs IdiotPlayer(Player):
+	"""This player can only play idiot.
+		Should this be a subclass?"""
+	# I think using the inherited init is fine?
+	
+	self.face_down = list()
+	self.face_up = list()
+		
 class Idiot(CardGame):
 	def __init__(self,number_of_decks=1):
 		CardGame(self,number_of_decks)
+		self.pile = list()
+	
+	@staticmethod
+	def det_num_decks(num_players):
+		return ceil(num_players/2)
 	
 	@staticmethod
 	def rules():
