@@ -15,6 +15,23 @@ class Game:
 	def start(self):
 		"start the game with the players that have joined"
 		"this should DM each player their hand"
+		
+class Player:
+	"""This player can play many types of games"""
+	def __init__(self, name, id):
+		self.hand = list()
+		self.name = name
+		self.id = id
+		
+	def set_hand(self, hand):
+		self.hand = hand
+		sorted(self.hand)
+	
+	def send_hand(self):
+		"""Send a DM to the user of their hand.
+		Need to store the id for this reason. Name in the server might not work?"""
+		
+	
 
 class CardGame(Game):
 	def __init__(self,number_of_decks=1):
