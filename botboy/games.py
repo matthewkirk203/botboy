@@ -39,7 +39,7 @@ class Player:
 
 class CardGame(Game):
     def __init__(self,number_of_decks=1):
-        card_values = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']
+        card_values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
         card_suits = ['♥','♦','♣','♠']
         self.default_deck = [v+s for v in card_values for s in card_suits]
         self.deck = self.default_deck*number_of_decks
@@ -83,18 +83,45 @@ class IdiotPlayer(Player):
     face_up = list()
 
     def play(self, card, num=1):
-        """Play a card with an option to play more than 1."""
+        """Play a card with an option to play more than 1.
+        This method returns whether or not the player has made a valid
+        selection. Whether or not the it is valid to play at the current time
+        in the game is up to the game class to decide."""
         # Make sure player has card
-        # Make sure it can be played
-        # Remove card from hand
-        # Send to IdiotGame pile
-        # Check for blowup (in IdiotGame? probably)
+        card_present = False
+        for c in self.hand:
+            if card == c[0]:
+                card_present = True
+                break
+        if not card_present: # it might be a face_up card
+            for c in self.face_up:
+                if card == c[0]:
+                    card_present = True
+                    break
+        return card_present, card
 
 
 class Idiot(CardGame):
     players = list()
     game_started = False
     cur_player_index = 1
+    # Because a 10 can beat anything it gets the highest score.
+    # A 2 will just have to be written as an exception
+    card_rank = {
+        2 : 2,
+        3 : 3,
+        4 : 4,
+        5 : 5,
+        6 : 6,
+        7 : 7,
+        8 : 8,
+        9 : 9,
+        10 : 14,
+        'J' : 11,
+        'Q' : 12,
+        'K' : 13,
+        'A' : 14
+        }
     def __init__(self,number_of_decks=1):
         CardGame.__init__(self, number_of_decks)
         self.pile = list()
@@ -113,12 +140,26 @@ class Idiot(CardGame):
         self.num_decks = self.det_num_decks(len(self.players))
         self.deal()
 
+    #TODO figure out how this interface should interact with Player.play()
+    # Do we pass in the game instance to Player.play()?
+    def process_play(self, player, play):
+        """A player has decided to play. Is it valid?"""
+        card_present, card = player.play()
+        # Make sure it can be played
+        # Remove card from hand
+        # Send to IdiotGame pile
+        # Check for blowup (in IdiotGame? probably)
+
+    def turn(self):
+        """Whose turn is it?"""
+        return self.players[self.cur_player_index].name
+
     def deal(self):
         for p in self.players:
             # deal 3 face down, 3 face up, 3 to hand
             p.face_down = self.draw(3)
             p.face_up = self.draw(3)
-            p.hand = self.draw(3)
+            p.hand = (self.draw(3))
 
     def det_first_player(self):
         # The first player is whoever has the 3 of clubs
