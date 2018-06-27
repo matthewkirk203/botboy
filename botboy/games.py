@@ -48,7 +48,7 @@ class CardGame(Game):
 
     def draw(self, num_cards=1):
         cards = list()
-        for i in xrange(num_cards):
+        for i in range(num_cards):
             cards.append(self.deck.pop())
         if len(cards) == 1: # should we just return a size 1 list?
             return cards[0]
