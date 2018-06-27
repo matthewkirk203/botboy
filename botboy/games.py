@@ -41,12 +41,14 @@ class CardGame(Game):
     def __init__(self,number_of_decks=1):
         card_values = ['A','2','3','4','5','6','7','8','9','10','J','Q','K']
         card_suits = ['♥','♦','♣','♠']
-        self.deck = [v+s for v in card_values for s in card_suits]
-        self.deck = self.deck*number_of_decks
+        self.default_deck = [v+s for v in card_values for s in card_suits]
+        self.deck = self.default_deck*number_of_decks
         random.shuffle(self.deck)
         self.game_started = False
 
     def draw(self, num_cards=1):
+        """Attempting to draw more cards than there is deck will raise
+            an exception."""
         cards = list()
         for i in range(num_cards):
             cards.append(self.deck.pop())
@@ -77,19 +79,66 @@ class IdiotPlayer(Player):
     """This player can only play idiot.
         Should this be a subclass?"""
     # I think using the inherited init is fine?
-
     face_down = list()
     face_up = list()
 
+    def play(self, card, num=1):
+        """Play a card with an option to play more than 1."""
+        # Make sure player has card
+        # Make sure it can be played
+        # Remove card from hand
+        # Send to IdiotGame pile
+        # Check for blowup (in IdiotGame? probably)
+
+
 class Idiot(CardGame):
+    players = list()
+    game_started = False
+    cur_player_index = 1
     def __init__(self,number_of_decks=1):
-        CardGame(self,number_of_decks)
+        CardGame.__init__(self, number_of_decks)
         self.pile = list()
+
+    def add_player(self, player):
+        if not self.game_started:
+            self.players.append(player)
+        else:
+            print("Game has already started")
+
+    def start(self):
+        if len(self.players) < 2:
+            print("Not enough players. Need at least 2.")
+            return
+        self.game_started = True
+        self.num_decks = self.det_num_decks(len(self.players))
+        self.deal()
+
+    def deal(self):
+        for p in self.players:
+            # deal 3 face down, 3 face up, 3 to hand
+            p.face_down = self.draw(3)
+            p.face_up = self.draw(3)
+            p.hand = self.draw(3)
+
+    def det_first_player(self):
+        # The first player is whoever has the 3 of clubs
+        # I'll figure this out later
+        pass
+
+    def player_order(self):
+        s = ''
+        i = 1
+        for p in self.players:
+            s += '{}. {}\n'.format(i, p.name)
+            i += 1
+        return s
+
 
     @staticmethod
     def det_num_decks(num_players):
         return math.ceil(num_players/4)
 
+    #TODO figure out how to format this so it prints more betterer
     @staticmethod
     def rules():
         """Returns the rules for the game."""
@@ -147,7 +196,11 @@ class Idiot(CardGame):
         return rules
 
 if __name__ == "__main__":
-    p = Player("Matt","1")
+    p1 = IdiotPlayer("Matt","1")
+    p2 = IdiotPlayer("Jesse","2")
+    g = Idiot()
+    g.add_player(p1)
+    g.add_player(p2)
 
 
 
