@@ -19,7 +19,7 @@ class Game:
 
 class Player:
     """This player can play many types of games"""
-    def __init__(self, name, id, hand=list()):
+    def __init__(self, name, id, hand=[]):
         self.hand = hand
         self.name = name
         self.id = id
@@ -41,6 +41,7 @@ class CardGame(Game):
     def __init__(self,number_of_decks=1):
         card_values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A']
         card_suits = ['♥','♦','♣','♠']
+        suits = '♥♦♣♠'
         self.default_deck = [v+s for v in card_values for s in card_suits]
         self.deck = self.default_deck*number_of_decks
         random.shuffle(self.deck)
@@ -49,7 +50,7 @@ class CardGame(Game):
     def draw(self, num_cards=1):
         """Attempting to draw more cards than there is deck will raise
             an exception."""
-        cards = list()
+        cards = []
         for i in range(num_cards):
             cards.append(self.deck.pop())
         if len(cards) == 1: # should we just return a size 1 list?
@@ -78,9 +79,11 @@ class TexasHoldEm(CardGame):
 class IdiotPlayer(Player):
     """This player can only play idiot.
         Should this be a subclass?"""
-    # I think using the inherited init is fine?
-    face_down = list()
-    face_up = list()
+    def __init__(self, name, id, hand=[]):
+        Player.__init__(self,name,id,hand)
+        self.suits = '♥♦♣♠'
+        self.face_down = []
+        self.face_up = []
 
     def play(self, card, num=1):
         """Play a card with an option to play more than 1.
@@ -90,19 +93,26 @@ class IdiotPlayer(Player):
         # Make sure player has card
         card_present = False
         card_count = 0
+        card = card.strip(self.suits)
         if self.hand:
             for c in self.hand:
-                if card == c[0]:
+                c_strip = c.strip(self.suits)
+                if card == c_strip:
+                    print("Card found in hand")
                     card_present = True
                     card_count += 1
         elif self.face_up:
+            print("Checking face_up")
             for c in self.face_up:
-                if card == c[0]:
+                c_strip = c.strip(self.suits)
+                if card == c_strip:
+                    print("Card found in face_up")
                     card_present = True
                     card_count += 1
         else: # You're playing a face_down card
+            print("Playing face_down")
             self.hand = self.face_down.pop()
-            card = self.hand[0]
+            card = self.hand[0].strip(self.suits)
             card_present = True
             card_count = 1
             num = 1
@@ -115,40 +125,56 @@ class IdiotPlayer(Player):
         else:
             return None
 
-    def remove_cards(self, card, num):
+    def remove_cards(self, card, num=1):
         # Can we assume that this will get valid data? Probably no.
         # Face down cards are added to your hand before you play them
+        cards = []
         if self.hand:
+            inds = self.find_cards_with_value(self.hand, card.strip(self.suits))
+            inds.sort(reverse=True)
             for i in range(num):
-                self.hand.remove(card[0])
-                return True
+                cards.append(self.hand.pop(inds[i]))
+                i += 1
+            return cards
         elif self.face_up:
+            inds = self.find_cards_with_value(self.face_up, card.strip(self.suits))
+            inds.sort(reverse=True)
             for i in range(num):
-                self.face_up.remove(card[0])
-                return True
+                card.append(self.face_up.pop(inds[i]))
+                i += 1
+            return cards
         else:
-            #something happened
-            return False
+            # This shouldn't happen. THere should always be a hand or face up cards
+            return []
 
-
-
+    def find_cards_with_value(self,cards, value):
+        """Returns a list of all of the indicies where a card with the given
+            value is. In the example '4♠', the value is '4'."""
+        indices = []
+        i = 0
+        for c in cards:
+            c_strip = c.strip(self.suits)
+            if c_strip == value:
+                indices.append(i)
+            i += 1
+        return indices
 
 class Idiot(CardGame):
-    players = list()
+    players = []
     game_started = False
     cur_player_index = 1
     # Because a 10 can beat anything it gets the highest score.
     # A 2 will just have to be written as an exception
     card_rank = {
-        2 : 2,
-        3 : 3,
-        4 : 4,
-        5 : 5,
-        6 : 6,
-        7 : 7,
-        8 : 8,
-        9 : 9,
-        10 : 14,
+        '2' : 2,
+        '3' : 3,
+        '4' : 4,
+        '5' : 5,
+        '6' : 6,
+        '7' : 7,
+        '8' : 8,
+        '9' : 9,
+        '10': 14,
         'J' : 11,
         'Q' : 12,
         'K' : 13,
@@ -156,7 +182,7 @@ class Idiot(CardGame):
         }
     def __init__(self,number_of_decks=1):
         CardGame.__init__(self, number_of_decks)
-        self.pile = list()
+        self.pile = []
 
     def add_player(self, player):
         if not self.game_started:
@@ -188,19 +214,36 @@ class Idiot(CardGame):
         pile_rank = self.card_rank[self.pile[-1]]
         # A 2 beats everything, but can be beat by everything.
         # This handles that exception.
-        if card[0] == 2:
+        if card.strip(self.suits) == 2:
             card_rank = 14
         else:
-            card_rank = self.card_rank[card]
+            card_rank = self.card_rank[card.strip(self.suits)]
         if self.pile and card_rank < pile_rank:
             # If there is stuff in the pile and what's being played is less
             # valuable than it, then it is invalid
             print("You can't play that!")
             return
         # Remove card(s) from hand/face-up
-        player.remove_cards(card,num)
+        cards = player.remove_cards(card,num)
         # Send to IdiotGame pile
-        # Check for blowup (in IdiotGame? probably)
+        self.pile + cards
+        # Check for blowup
+        if self.pile[-1].strip(self.suits) == 10:
+            self.pile.clear()
+            print("BOOM")
+        # Check to see if the last 4 are the same
+        else:
+            boom = True
+            # Last 4 of plie
+            for c in self.pile[-4:]:
+                if c.strip(self.suits) != self.pile[-1].strip(self.suits):
+                    #no boom
+                    boom = False
+                    break
+            if boom:
+                self.pile.clear()
+                print("BOOM")
+
 
     def turn(self):
         """Whose turn is it?"""
@@ -294,7 +337,7 @@ if __name__ == "__main__":
     g = Idiot()
     g.add_player(p1)
     g.add_player(p2)
-
+    g.start()
 
 
 
