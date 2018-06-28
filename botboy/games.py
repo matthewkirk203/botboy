@@ -61,7 +61,7 @@ class CardGame(Game):
 
 class TexasHoldEm(CardGame):
     def __init__(self,number_of_decks=1):
-        CardGame(self,number_of_decks)
+        CardGame.__init__(self,number_of_decks)
 
     def fold(self, player):
         "fold the player that issued this command"
@@ -89,16 +89,48 @@ class IdiotPlayer(Player):
         in the game is up to the game class to decide."""
         # Make sure player has card
         card_present = False
-        for c in self.hand:
-            if card == c[0]:
-                card_present = True
-                break
-        if not card_present: # it might be a face_up card
+        card_count = 0
+        if self.hand:
+            for c in self.hand:
+                if card == c[0]:
+                    card_present = True
+                    card_count += 1
+        elif self.face_up:
             for c in self.face_up:
                 if card == c[0]:
                     card_present = True
-                    break
-        return card_present, card
+                    card_count += 1
+        else: # You're playing a face_down card
+            self.hand = self.face_down.pop()
+            card = self.hand[0]
+            card_present = True
+            card_count = 1
+            num = 1
+
+        if card_present and num <= card_count:
+            # Once this is is discord integrated, this will probably be
+            # a discord command. Maybe it should call the Idiot instance
+            # .process_play()
+            return card, num
+        else:
+            return None
+
+    def remove_cards(self, card, num):
+        # Can we assume that this will get valid data? Probably no.
+        # Face down cards are added to your hand before you play them
+        if self.hand:
+            for i in range(num):
+                self.hand.remove(card[0])
+                return True
+        elif self.face_up:
+            for i in range(num):
+                self.face_up.remove(card[0])
+                return True
+        else:
+            #something happened
+            return False
+
+
 
 
 class Idiot(CardGame):
@@ -142,11 +174,31 @@ class Idiot(CardGame):
 
     #TODO figure out how this interface should interact with Player.play()
     # Do we pass in the game instance to Player.play()?
-    def process_play(self, player, play):
-        """A player has decided to play. Is it valid?"""
-        card_present, card = player.play()
-        # Make sure it can be played
-        # Remove card from hand
+    def process_play(self, player, card, num):
+        """A player has decided to play. Is it valid?
+            @param player the player that is making the play
+            @param card the card value being played (A, 9, 6, etc.)
+            @param num how many of the card is being played
+
+            It is assumed that the play being made is vaild in the sense that
+            the player has the cards. This function will make sure it follows
+            game rules such as checking what's in the pile and so forth."""
+        # Make sure it can be played - check the pile
+        # Check for empty pile or that the played card is >= the top of pile
+        pile_rank = self.card_rank[self.pile[-1]]
+        # A 2 beats everything, but can be beat by everything.
+        # This handles that exception.
+        if card[0] == 2:
+            card_rank = 14
+        else:
+            card_rank = self.card_rank[card]
+        if self.pile and card_rank < pile_rank:
+            # If there is stuff in the pile and what's being played is less
+            # valuable than it, then it is invalid
+            print("You can't play that!")
+            return
+        # Remove card(s) from hand/face-up
+        player.remove_cards(card,num)
         # Send to IdiotGame pile
         # Check for blowup (in IdiotGame? probably)
 
