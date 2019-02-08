@@ -1,8 +1,17 @@
+import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from logging.handlers import RotatingFileHandler
 
+# Make logs directory if it doesn't exist
+def make_log_dir():
+    logs_dir = os.path.dirname(os.path.realpath(__file__)) + "/logs"
+    if not os.path.isdir(logs_dir):
+        os.makedirs(logs_dir)
+
+# Setup logging
 def setup_logger():
+    make_log_dir()
     logger = logging.getLogger()
     if not logger.handlers:
         logger.setLevel(logging.DEBUG)
