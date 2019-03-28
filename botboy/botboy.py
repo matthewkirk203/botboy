@@ -19,6 +19,9 @@ c = conn.cursor()
 overwatch_table = "Overwatch"
 rps_table = "RPS"
 
+count = 0
+message_list = ["what", "what do you want", "stop it", "cut it out"]
+
 ow_roles = {}
 
 TOKEN = discord_token.botboy_token
@@ -391,6 +394,18 @@ async def policer(message):
     command = view.get_word()
     log.debug(command)
 
+    global count    
+
+    #log.debug("botboy id: {} / message raw_mentions: {}".format(bot.user.id, message.raw_mentions)) 
+    if bot.user.id in message.raw_mentions:
+        #log.debug("count: {}".format(count))
+        await bot.send_message(message.channel, message_list[count])
+
+        if count >= len(message_list):
+            count = 0
+        else:
+            count += 1
+ 
     # Check if message starts with a command - if yes, return
     if command in bot.commands:
         log.debug("--- caught a command")
