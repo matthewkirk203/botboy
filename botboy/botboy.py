@@ -12,9 +12,6 @@ import overwatch_helpers as owh
 import discord_token
 import json
 
-# Voice stuff
-discord.opus.load_opus("libopus0")
-
 
 # Establish db connection
 db = 'botboy_database.sqlite'
