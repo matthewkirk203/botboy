@@ -12,6 +12,10 @@ import overwatch_helpers as owh
 import discord_token
 import json
 
+# Voice stuff
+discord.opus.load_opus("libopus0")
+
+
 # Establish db connection
 db = 'botboy_database.sqlite'
 conn = sqlite3.connect(db)
@@ -46,40 +50,40 @@ async def on_ready():
     log.info("DB: {0}".format(db))
     # Get the server the bot's on. Right now it's just getting 
     # the first one which should hopefully be the one we care about???
-    servers = []
-    [servers.append(x) for x in bot.servers]
-    server = servers[0]
-    log.info('Server: ' + str(server))
+    guilds = []
+    [guilds.append(x) for x in bot.guilds]
+    guild = guilds[0]
+    log.info('Server: ' + str(guild))
 
     # Compile list of OW roles per server, in a dictionary
     ranks = ["grandmaster","master","diamond","platinum","gold","silver","bronze"]
-    for serv in servers:
+    for serv in guilds:
         ow_roles[serv] = [discord.utils.get(serv.roles, name=rank_name) for rank_name in ranks]
 
 
 @bot.command()
-async def hello():
+async def hello(ctx):
     """Says world"""
-    await bot.say("world")
+    await ctx.send("world")
 
 
 @bot.command()
-async def add(left : int, right : int):
+async def add(ctx, left : int, right : int):
     """Adds two numbers together."""
-    await bot.say(left + right)
+    await ctx.send(left + right)
 
 
 @bot.command()
-async def gtfo():
+async def gtfo(ctx):
     """Makes Botboy leave (go offline)"""
     conn.close()
-    await bot.say("Bye!")
+    await ctx.send("Bye!")
     await bot.logout()
     quit()
 
 
 # Rock Paper Scissors
-@bot.command(pass_context=True)
+@bot.command()
 async def rps(ctx, player_choice):
     """Play rock, paper, scissors against Botboy (eg. !rps r)"""
     # See if player is already in database. If not, create their entry.
@@ -107,7 +111,7 @@ async def rps(ctx, player_choice):
         try:
             player_choice_index = alt_choices.index(player_choice)
         except:
-            await bot.say("ERROR: must enter 'rock' (or r), 'paper' (or p), 'scissors' (or s)")
+            await ctx.send("ERROR: must enter 'rock' (or r), 'paper' (or p), 'scissors' (or s)")
             return
 
     # Determine result from matrix
@@ -137,10 +141,10 @@ async def rps(ctx, player_choice):
     win_percentage = (wins/(wins+draws+losses))*100
     response += "\nWins: " + str(wins) + "\nDraws: " + str(draws) + "\nLosses: " + str(losses) + "\nWin %: " + str(win_percentage) + "%"
     # Say it
-    await bot.say(response)
+    await ctx.send(response)
     conn.commit()
     
-@bot.command(pass_context=True)
+@bot.command()
 async def rps_rank(ctx):
     """Rank rps players by # of wins"""
     query = sql.select(rps_table, order="Wins DESC")
@@ -168,7 +172,7 @@ async def rps_rank(ctx):
     await bot.send_message(ctx.message.channel, embed=em)
 
 # Overwatch
-@bot.command(pass_context=True)
+@bot.command()
 async def ow_add(ctx, battle_tag, member : discord.Member = None):
     """Add an Overwatch player to the database (e.g. !ow_add JeffKaplan#420 @JeffKaplan)"""
     if member is None:
@@ -179,30 +183,30 @@ async def ow_add(ctx, battle_tag, member : discord.Member = None):
     # print(type(member))
     # print(discord.Member)
     if type(member) is not discord.Member:
-        await bot.say("ERROR: @mention the user instead of just typing it")
+        await ctx.send("ERROR: @mention the user instead of just typing it")
         return
 
     # See if the battle_tag is already in the db
     query = sql.select(overwatch_table, column_names=['BattleTag', 'DiscordName'], condition={'BattleTag':battle_tag})
     if len((c.execute(query)).fetchall()) is not 0:
-        await bot.say("Account " + battle_tag + " already in list!")
+        await ctx.send("Account " + battle_tag + " already in list!")
         return
 
     sr = await owh.get_sr(battle_tag)
     if sr == None:
-        await bot.say("Account " + battle_tag + " doesn't exist!")
+        await ctx.send("Account " + battle_tag + " doesn't exist!")
         return
 
     query = sql.insert(overwatch_table, [battle_tag, sr, str(member)])
     #query = "INSERT INTO " + overwatch_table + " VALUES('" + battle_tag + "', '" + str(member) + "')"
     #print(query)
     c.execute(query)
-    await bot.say("Added " + battle_tag + " with discord member @" + str(member))
+    await ctx.send("Added " + battle_tag + " with discord member @" + str(member))
     conn.commit()
 
 
 @bot.command()
-async def ow_list():
+async def ow_list(ctx):
     """List players in Overwatch database"""
     query = sql.select(overwatch_table, order="LOWER(BattleTag)")
     #query = "SELECT * FROM Overwatch"
@@ -219,9 +223,9 @@ async def ow_list():
     for row in tags:
         output += row[0] + " as @" + row[1] + '\n'
 
-    await bot.say(output)
+    await ctx.send(output)
 
-@bot.command(pass_context=True)
+@bot.command()
 async def ow_rank(ctx):
     """Rank Overwatch players in database by SR"""
     query = sql.select(overwatch_table, order="SR DESC")
@@ -235,7 +239,7 @@ async def ow_rank(ctx):
         rank += 1
     await bot.send_message(ctx.message.channel, embed=em)
 
-@bot.command(pass_context=True)
+@bot.command()
 async def ow_ru(ctx):
     """Update Discord users' roles according to Overwatch SR"""
     await bot.send_typing(ctx.message.channel)
@@ -250,9 +254,9 @@ async def ow_ru(ctx):
     await asyncio.gather(*tasks)
     conn.commit()
 
-    server = ctx.message.server
-    await update_roles(server)
-    await bot.say("Done updating roles!")
+    server = ctx.message.guild
+    await update_roles(guild)
+    await ctx.send("Done updating roles!")
 
 async def update_sr(battle_tag):
     """Does something like this already exist???"""
@@ -269,18 +273,18 @@ async def update_sr(battle_tag):
 #     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
 #     await bot.send_message(ctx.message.channel, embed=em)
 
-@bot.command(pass_context=True)
+@bot.command()
 async def test(ctx):
     """A test for dummies"""
     member = ctx.message.author
     # for row in bot.servers:
     #     print(row)
 
-    servers = []
-    [servers.append(x) for x in bot.servers]
-    server = servers[0]
+    guilds = []
+    [guilds.append(x) for x in bot.guilds]
+    guild = guild[0]
 
-    role = discord.utils.get(ctx.message.server.roles, name='dumb')
+    role = discord.utils.get(ctx.message.guild.roles, name='dumb')
     await bot.add_roles(member, role)
 
 async def auto_role_update():
