@@ -13,6 +13,10 @@ import discord_token
 import json
 
 
+# Voice stuff
+# discord.opus.load_opus("libopus0")
+
+
 # Establish db connection
 db = 'botboy_database.sqlite'
 conn = sqlite3.connect(db)
@@ -423,6 +427,58 @@ async def policer(message):
     else:
         # TODO: do async's need an await every time? Or is return sufficient?
         return
+
+
+@bot.command()
+async def vconnect(ctx):
+    v_guild = ctx.message.guild
+    log.info("Guild is: {}".format(v_guild))
+    v_chan = v_guild.voice_channels[0]
+    log.info("Voice channel: {}".format(v_chan))
+    vc = await v_chan.connect()
+
+@bot.command()
+async def vdisconnect(ctx):
+    log.info("Disconnecting from all voice channels")
+    for v_chan in bot.voice_clients:
+        log.info("Disconnecting from: {}".format(v_chan))
+        await v_chan.disconnect()
+
+
+@bot.command()
+async def play(ctx):
+    audio_file = "please_leave.mp3"
+    log.info("Playing {}".format(audio_file))
+    vc = bot.voice_clients[0]
+    vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+
+async def play_bad_channel(v_chan):
+    log.info("Voice channel: {}".format(v_chan))
+    vc = await v_chan.connect()
+    log.info("Playing {}".format(audio_file))
+    vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+
+@bot.command()
+async def stop(ctx):
+    log.info("Stopping audio")
+    vc = bot.voice_clients[0]
+    vc.stop()
+
+@bot.listen('on_voice_state_update')
+async def bad_channel(member, before, after):
+    if after.channel is not None:
+        if "Bad Channel" in after.channel.name:
+            log.info("User {} entered channel {}".format(member, after.channel.name))
+            if (bot.voice_clients != []) and (after.channel in bot.voice_clients):
+                log.info("Already in  {}".format(after.channel))
+            else:
+                await play_bad_channel(after.channel)
+    else:
+        if ("Bad Channel" in before.channel.name) and (after.channel is None):
+            log.info("User {} left {}".format(member, before.channel.name))
+            if before.channel.members == []:
+                log.info("Channel {} is empty - leaving channel".format(before.channel))
+
 
 setup.setup_logger()
 
