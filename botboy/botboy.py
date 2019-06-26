@@ -433,9 +433,18 @@ async def policer(message):
 async def vconnect(ctx):
     v_guild = ctx.message.guild
     log.info("Guild is: {}".format(v_guild))
-    v_chan = v_guild.voice_channels[0]
+    if ctx.message.channel_mentions != []:
+        if len(ctx.message.channel_mentions) > 1:
+            await ctx.send("ERROR: must only menion one channel")
+            return
+        else:
+            v_chan = ctx.message.channel_mentions[0]
+    else:
+        v_chan = v_guild.voice_channels[0]
+
     log.info("Voice channel: {}".format(v_chan))
     vc = await v_chan.connect()
+
 
 @bot.command()
 async def vdisconnect(ctx):
@@ -452,11 +461,6 @@ async def play(ctx):
     vc = bot.voice_clients[0]
     vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
 
-async def play_bad_channel(v_chan):
-    log.info("Voice channel: {}".format(v_chan))
-    vc = await v_chan.connect()
-    log.info("Playing {}".format(audio_file))
-    vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
 
 @bot.command()
 async def stop(ctx):
@@ -464,20 +468,46 @@ async def stop(ctx):
     vc = bot.voice_clients[0]
     vc.stop()
 
+
 @bot.listen('on_voice_state_update')
 async def bad_channel(member, before, after):
+    bad_channel_name = "Bad Channel"
     if after.channel is not None:
-        if "Bad Channel" in after.channel.name:
+        if bad_channel_name in after.channel.name:
             log.info("User {} entered channel {}".format(member, after.channel.name))
-            if (bot.voice_clients != []) and (after.channel in bot.voice_clients):
-                log.info("Already in  {}".format(after.channel))
+            if (len(bot.voice_clients) != 0):
+                for v_client in bot.voice_clients:
+                    if after.channel == v_client.channel:
+                        log.info("Already in  {}".format(after.channel))
+                        return
             else:
                 await play_bad_channel(after.channel)
     else:
         if ("Bad Channel" in before.channel.name) and (after.channel is None):
             log.info("User {} left {}".format(member, before.channel.name))
-            if before.channel.members == []:
+            if len(before.channel.members) == 1:
                 log.info("Channel {} is empty - leaving channel".format(before.channel))
+                for v_client in bot.voice_clients:
+                    if v_client.channel == before.channel:
+                        await v_client.disconnect()
+
+
+
+async def play_bad_channel(v_chan):
+    audio_file = "please_leave.mp3"
+    log.info("Voice channel: {}".format(v_chan))
+    vc = await v_chan.connect()
+    time.sleep(1)
+    log.info("Playing {}".format(audio_file))
+    for i in range(0,10):
+        try:
+            vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+        except Exception as e:
+            log.warning("Got exception: {}".format(e))
+
+        time.sleep(5)
+        i+=1
+
 
 
 setup.setup_logger()
