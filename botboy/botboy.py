@@ -14,7 +14,7 @@ import json
 
 
 # Voice stuff
-# discord.opus.load_opus("libopus0")
+discord.opus.load_opus("/usr/lib64/libopus.so.0")
 
 
 # Establish db connection
@@ -459,7 +459,7 @@ async def play(ctx):
     audio_file = "please_leave.mp3"
     log.info("Playing {}".format(audio_file))
     vc = bot.voice_clients[0]
-    vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+    vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: log.info('done', e))
 
 
 @bot.command()
@@ -510,12 +510,13 @@ async def play_bad_channel(v_chan):
         if len(v_chan.members) > 1:
             log.info("More than one member in bad channel")
             try:
-                vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+                vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: log.info('done', e))
             except Exception as e:
                 log.warning("Got exception: {}".format(e))
         else:
             log.info("Only one member in bad channel - leaving")
             await stop_bad_channel(v_chan)
+            return
         await asyncio.sleep(5)
         i+=1
 
