@@ -36,13 +36,13 @@ bot = commands.Bot(command_prefix='!', description=description)
 
 async def background_tasks(loop_timer):
     await bot.wait_until_ready()
-    counter = 0
+    # counter = 0
     #TODO: Get the channel ID. Right now it is for bot-testing
-    channel = discord.Object(id=430560047295234051)
-    while not bot.is_closed:
-        counter += 1
-        await bot.send_message(channel, counter)
-        await asyncio.sleep(loop_timer) # task runs every loop_timer seconds
+    # channel = discord.Object(id=430560047295234051)
+    # while not bot.is_closed:
+    #     counter += 1
+    #     # await ctx.send(channel, counter)
+    #     await asyncio.sleep(loop_timer) # task runs every loop_timer seconds
 
 @bot.event
 async def on_ready():
@@ -170,7 +170,7 @@ async def rps_rank(ctx):
     em.add_field(name="Name", value='\n'.join(stats[0]), inline=True)
     em.add_field(name="W / D / L", value='\n'.join(stats[1]), inline=True)
     em.add_field(name="Win %", value='\n'.join(stats[-1]), inline=True)
-    await bot.send_message(ctx.message.channel, embed=em)
+    await ctx.send(ctx.message.channel, embed=em)
 
 # Overwatch
 @bot.command()
@@ -238,7 +238,7 @@ async def ow_rank(ctx):
         value = '\n'.join(values)
         em.add_field(name=name, value=value)
         rank += 1
-    await bot.send_message(ctx.message.channel, embed=em)
+    await bot.ctx.sendessage(ctx.message.channel, embed=em)
 
 @bot.command()
 async def ow_ru(ctx):
@@ -272,7 +272,7 @@ async def update_sr(battle_tag):
 # async def tester(ctx):
 #     em = discord.Embed(title='This is a test', description='My Embed Content.', colour=0xDEADBF)
 #     em.set_author(name='A BottyBoy', icon_url=bot.user.default_avatar_url)
-#     await bot.send_message(ctx.message.channel, embed=em)
+#     await bot.ctx.sendessage(ctx.message.channel, embed=em)
 
 @bot.command()
 async def test(ctx):
@@ -404,7 +404,7 @@ async def policer(message):
     #log.debug("botboy id: {} / message raw_mentions: {}".format(bot.user.id, message.raw_mentions)) 
     if bot.user.id in message.raw_mentions:
         #log.debug("count: {}".format(count))
-        await bot.send_message(message.channel, message_list[count])
+        await message.channel.send(message_list[count])
 
         if count >= len(message_list):
             count = 0
@@ -422,7 +422,7 @@ async def policer(message):
             # log.debug(message.author)
             # log.debug("No attachments found in message")
             # TODO: get rid of return when we add an await
-            # await bot.send_message(message.channel, "You know the rules.")
+            # await ctx.send(message.channel, "You know the rules.")
             return
     else:
         # TODO: do async's need an await every time? Or is return sufficient?
@@ -487,25 +487,36 @@ async def bad_channel(member, before, after):
             log.info("User {} left {}".format(member, before.channel.name))
             if len(before.channel.members) == 1:
                 log.info("Channel {} is empty - leaving channel".format(before.channel))
-                for v_client in bot.voice_clients:
-                    if v_client.channel == before.channel:
-                        await v_client.disconnect()
+                await stop_bad_channel(before.channel)
+                # for v_client in bot.voice_clients:
+                #     if v_client.channel == before.channel:
+                #         await v_client.disconnect()
 
+
+async def stop_bad_channel(v_chan):
+    log.info("Stopping bad channel stuff")
+    for v_client in bot.voice_clients:
+        if v_client.channel == v_chan:
+            await v_client.disconnect()
 
 
 async def play_bad_channel(v_chan):
     audio_file = "please_leave.mp3"
     log.info("Voice channel: {}".format(v_chan))
     vc = await v_chan.connect()
-    time.sleep(1)
+    await asyncio.sleep(1)
     log.info("Playing {}".format(audio_file))
-    for i in range(0,10):
-        try:
-            vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
-        except Exception as e:
-            log.warning("Got exception: {}".format(e))
-
-        time.sleep(5)
+    for i in range(0,5):
+        if len(v_chan.members) > 1:
+            log.info("More than one member in bad channel")
+            try:
+                vc.play(discord.FFmpegPCMAudio(audio_file), after=lambda e: print('done', e))
+            except Exception as e:
+                log.warning("Got exception: {}".format(e))
+        else:
+            log.info("Only one member in bad channel - leaving")
+            await stop_bad_channel(v_chan)
+        await asyncio.sleep(5)
         i+=1
 
 
