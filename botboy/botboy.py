@@ -11,6 +11,7 @@ import urllib.request
 import overwatch_helpers as owh
 import discord_token
 import json
+import re
 
 
 # Establish db connection
@@ -76,7 +77,8 @@ async def gtfo(ctx):
     conn.close()
     await ctx.send("Bye!")
     await bot.logout()
-    quit()
+    conn.close()
+    # quit()
 
 
 # Rock Paper Scissors
@@ -423,6 +425,116 @@ async def policer(message):
     else:
         # TODO: do async's need an await every time? Or is return sufficient?
         return
+
+permitted_role_obj_assignments = {}
+permitted_role_name_assignments = {}
+
+def update_role_name_dict_from_role_dict(role_obj_dict, role_name_dict):
+    # Add function to build dict with role names from dict with role objects
+    # e.g. { rolekey1 : [ role1 , role2 ], rolekey2 : [ role3, role4 ]}
+    for key_role_obj, role_obj_list in role_obj_dict.items():
+        # Iterate through obj dict
+        key_role_name = key_role_obj.name
+        if key_role_name in role_name_dict:
+            # If key role is already in name dict
+            for role_obj in role_obj_list:
+                # Iterate through obj list
+                if role_obj.name in role_name_dict[key_role_name]:
+                    # If role name is already in name list, continue
+                    continue
+                else:
+                    # If role name is not already in name list, append it to list
+                    role_name_dict[key_role_name].append(role_obj.name)
+        else:
+            # If key role is not already in name dict
+            role_name_dict[key_role_name] = []
+            for role_obj in role_obj_list:
+                role_name_dict[key_role_name].append(role_obj.name)
+            
+
+@bot.command()
+async def role_add_permission(ctx):
+    role = ctx.message.role_mentions[0]
+    log.info("ROLE: {}".format(role.id))
+
+    content = ctx.message.content
+    managed_roles = []
+    log.info("CTX: {}".format(ctx.message.content))
+    match = re.search(r"{(.*):(.*)}", content)
+    if match:
+        try:
+            log.info("group 1: {}".format(match.group(1)))
+            managing_role_id = match.group(1).strip()
+            managing_role_id = managing_role_id.replace("<","")
+            managing_role_id = managing_role_id.replace(">","")
+            managing_role_id = managing_role_id.replace("@&","")
+        except:
+            log.error("Misformatted command - no managing role!")
+
+        try:
+            tmp_list_1 = [x.strip() for x in match.group(2).split(",")]
+            tmp_list_2 = [x.replace("<","") for x in tmp_list_1]
+            tmp_list_3 = [x.replace(">","") for x in tmp_list_2]
+            managed_roles_ids = [x.replace("@&","") for x in tmp_list_3]
+        except:
+            log.error("Misformatted command - no managed roles!")
+
+    log.info("Managing role id: {}".format(managing_role_id))
+    log.info("Managed roles ids: {}".format(managed_roles_ids))
+
+    managing_role = ctx.guild.get_role(int(managing_role_id))
+    for managed_role_id in managed_roles_ids:
+        managed_roles.append(ctx.guild.get_role(int(managed_role_id)))
+
+    log.info("Managing role: {}".format(managing_role))
+    log.info("Manged roles: {}".format(managed_roles))
+
+    if managing_role in permitted_role_obj_assignments:
+        for role in managed_roles:
+            if not role in permitted_role_obj_assignments[managing_role]:
+                permitted_role_obj_assignments[managing_role].append(role)
+    else:
+        permitted_role_obj_assignments[managing_role] = managed_roles
+
+    log.info("PERMITTED ROLE OBJ ASSIGNMENTS: {}".format(permitted_role_obj_assignments))
+    update_role_name_dict_from_role_dict(permitted_role_obj_assignments, permitted_role_name_assignments)
+    log.info("PERMITTED ROLE NAME ASSIGNMENTS: {}".format(permitted_role_name_assignments))
+    await ctx.send("ROLE PERMISSIONS ARE: {}".format(permitted_role_name_assignments))
+
+
+@bot.command()
+async def role_remove_permission(ctx):
+    # NOTE: this is not yet implemented - copy logic from role_add_permissions 
+
+
+@bot.command()
+async def role_add(ctx):
+    members = ctx.message.mentions
+    roles = ctx.message.role_mentions
+    message_member_mentions = []
+    allowed = False
+
+    # Can currently only add one role at a time because member.add_roles only accepts one role (I think...need to figure this out)    
+    edited_role = roles[0]
+    authors_roles = ctx.author.roles
+
+    for role in authors_roles:
+        if role in permitted_role_obj_assignments:
+            if edited_role in permitted_role_obj_assignments[role]:
+                allowed = True
+    
+    if allowed:
+        for member in members:
+            if edited_role in member.roles:
+                log.info("Role {} already belongs to member {}".format(edited_role, member))
+            else:
+                log.info("Adding role {} - to member {}".format(edited_role, member))
+                await member.add_roles(edited_role)
+                message_member_mentions.append(member.mention)
+        
+        await ctx.send("Added role: {} - to members: {}".format(edited_role.mention, message_member_mentions))
+    else:
+        await ctx.send("ERROR: user {} not permitted to add role {}".format(ctx.author.mention, edited_role.mention))
 
 setup.setup_logger()
 
