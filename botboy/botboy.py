@@ -472,10 +472,6 @@ async def role_add_permission(ctx):
             managing_role_id = managing_role_id.replace("<","")
             managing_role_id = managing_role_id.replace(">","")
             managing_role_id = managing_role_id.replace("@&","")
-        except:
-            log.error("Misformatted command - no managing role!")
-
-        try:
             # Second match group contained managed roles
             tmp_list_1 = [x.strip() for x in match.group(2).split(",")]
             tmp_list_2 = [x.replace("<","") for x in tmp_list_1]
@@ -483,6 +479,12 @@ async def role_add_permission(ctx):
             managed_roles_ids = [x.replace("@&","") for x in tmp_list_3]
         except:
             log.error("Misformatted command - no managed roles!")
+            await ctx.send("ERROR: misformatted command. Must be of format { @managing_role : @managed_role }")
+            return
+    else:
+        log.error("Misformatted command - no managed roles!")
+        await ctx.send("ERROR: misformatted command. Must be of format { @managing_role : @managed_role }")
+        return
 
     log.info("Managing role id: {}".format(managing_role_id))
     log.info("Managed roles ids: {}".format(managed_roles_ids))
@@ -515,6 +517,56 @@ async def role_remove_permission(ctx):
     # NOTE: this is not yet implemented - copy logic from role_add_permissions
     pass
 
+@bot.command()
+async def role_check_permissions(ctx):
+    await ctx.send("ROLE PERMISSIONS ARE: {}".format(permitted_role_name_assignments))
+
+def check_member_has_permission(members_roles, role_to_edit, permitted_dict):
+    # Make sure author has permission to remove this role
+    allowed = False
+    for role in members_roles:
+        if role in permitted_dict:
+            if role_to_edit in permitted_dict[role]:
+                allowed = True
+    return allowed
+
+
+@bot.command()
+async def role_remove(ctx):
+    # Add a role to a member's list of roles
+    members = ctx.message.mentions
+    roles = ctx.message.role_mentions
+    message_member_mentions = []
+    allowed = False
+
+    # Can currently only remove one role at a time because member.remove_roles only accepts one role
+    # (I think...need to figure this out)    
+    edited_role = roles[0]
+    authors_roles = ctx.author.roles
+
+    allowed = check_member_has_permission(authors_roles, edited_role, permitted_role_obj_assignments)
+    # Make sure author has permission to remove this role
+    # for role in authors_roles:
+    #     if role in permitted_role_obj_assignments:
+    #         if edited_role in permitted_role_obj_assignments[role]:
+    #             allowed = True
+    
+    # If author has permission, remove role from all mentioned members if they don't already have it
+    if allowed:
+        for member in members:
+            message_member_mentions.append(member.mention)
+            if edited_role in member.roles:
+                log.info("Removing role {} from member {}".format(edited_role, member))
+                await member.remove_roles(edited_role)
+            else:
+                log.info("Role {} - doesn't belong to member {}. Nothing to remove".format(edited_role, member))
+        # Send botboy message confirmation
+        await ctx.send("Removed role: {} - from members: {}".format(edited_role.mention, message_member_mentions))
+    else:
+        # Send botboy message error
+        await ctx.send("ERROR: user {} not permitted to remove role {}".format(ctx.author.mention, edited_role.mention))
+
+
 
 @bot.command()
 async def role_add(ctx):
@@ -529,21 +581,22 @@ async def role_add(ctx):
     edited_role = roles[0]
     authors_roles = ctx.author.roles
 
+    allowed = check_member_has_permission(authors_roles, edited_role, permitted_role_obj_assignments)
     # Make sure author has permission to assign this role
-    for role in authors_roles:
-        if role in permitted_role_obj_assignments:
-            if edited_role in permitted_role_obj_assignments[role]:
-                allowed = True
+    # for role in authors_roles:
+    #     if role in permitted_role_obj_assignments:
+    #         if edited_role in permitted_role_obj_assignments[role]:
+    #             allowed = True
     
     # If author has permission, assign role to all mentioned members if they don't already have it
     if allowed:
         for member in members:
+            message_member_mentions.append(member.mention)
             if edited_role in member.roles:
                 log.info("Role {} already belongs to member {}".format(edited_role, member))
             else:
                 log.info("Adding role {} - to member {}".format(edited_role, member))
                 await member.add_roles(edited_role)
-                message_member_mentions.append(member.mention)
         # Send botboy message confirmation
         await ctx.send("Added role: {} - to members: {}".format(edited_role.mention, message_member_mentions))
     else:
