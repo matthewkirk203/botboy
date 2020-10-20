@@ -426,11 +426,14 @@ async def policer(message):
         # TODO: do async's need an await every time? Or is return sufficient?
         return
 
+# Dict containing permissions for roles to assign other roles -- contains role objects
 permitted_role_obj_assignments = {}
+# Dict containing permissions for roles to assign other roles -- contains role names
+# NOTE: these two dicts should have the same roles/permissions
 permitted_role_name_assignments = {}
 
 def update_role_name_dict_from_role_dict(role_obj_dict, role_name_dict):
-    # Add function to build dict with role names from dict with role objects
+    # Function to build dict with role names from dict with role objects
     # e.g. { rolekey1 : [ role1 , role2 ], rolekey2 : [ role3, role4 ]}
     for key_role_obj, role_obj_list in role_obj_dict.items():
         # Iterate through obj dict
@@ -454,15 +457,16 @@ def update_role_name_dict_from_role_dict(role_obj_dict, role_name_dict):
 
 @bot.command()
 async def role_add_permission(ctx):
-    role = ctx.message.role_mentions[0]
-    log.info("ROLE: {}".format(role.id))
-
+    # Get content of message
+    # can't use ctx.message.mentioned_roles because that doesn't preserved the order in which roles are mentioned
     content = ctx.message.content
     managed_roles = []
     log.info("CTX: {}".format(ctx.message.content))
+    # Use regex to parse out roles from content
     match = re.search(r"{(.*):(.*)}", content)
     if match:
         try:
+            # First match group contains managing role
             log.info("group 1: {}".format(match.group(1)))
             managing_role_id = match.group(1).strip()
             managing_role_id = managing_role_id.replace("<","")
@@ -472,6 +476,7 @@ async def role_add_permission(ctx):
             log.error("Misformatted command - no managing role!")
 
         try:
+            # Second match group contained managed roles
             tmp_list_1 = [x.strip() for x in match.group(2).split(",")]
             tmp_list_2 = [x.replace("<","") for x in tmp_list_1]
             tmp_list_3 = [x.replace(">","") for x in tmp_list_2]
@@ -482,6 +487,7 @@ async def role_add_permission(ctx):
     log.info("Managing role id: {}".format(managing_role_id))
     log.info("Managed roles ids: {}".format(managed_roles_ids))
 
+    # Get role objects from their IDs
     managing_role = ctx.guild.get_role(int(managing_role_id))
     for managed_role_id in managed_roles_ids:
         managed_roles.append(ctx.guild.get_role(int(managed_role_id)))
@@ -489,6 +495,7 @@ async def role_add_permission(ctx):
     log.info("Managing role: {}".format(managing_role))
     log.info("Manged roles: {}".format(managed_roles))
 
+    # Add role management permissions to dict if they don't already exist
     if managing_role in permitted_role_obj_assignments:
         for role in managed_roles:
             if not role in permitted_role_obj_assignments[managing_role]:
@@ -497,6 +504,7 @@ async def role_add_permission(ctx):
         permitted_role_obj_assignments[managing_role] = managed_roles
 
     log.info("PERMITTED ROLE OBJ ASSIGNMENTS: {}".format(permitted_role_obj_assignments))
+    # Update the more simple permitted_role_name_assignments dict
     update_role_name_dict_from_role_dict(permitted_role_obj_assignments, permitted_role_name_assignments)
     log.info("PERMITTED ROLE NAME ASSIGNMENTS: {}".format(permitted_role_name_assignments))
     await ctx.send("ROLE PERMISSIONS ARE: {}".format(permitted_role_name_assignments))
@@ -504,25 +512,30 @@ async def role_add_permission(ctx):
 
 @bot.command()
 async def role_remove_permission(ctx):
-    # NOTE: this is not yet implemented - copy logic from role_add_permissions 
+    # NOTE: this is not yet implemented - copy logic from role_add_permissions
+    pass
 
 
 @bot.command()
 async def role_add(ctx):
+    # Add a role to a member's list of roles
     members = ctx.message.mentions
     roles = ctx.message.role_mentions
     message_member_mentions = []
     allowed = False
 
-    # Can currently only add one role at a time because member.add_roles only accepts one role (I think...need to figure this out)    
+    # Can currently only add one role at a time because member.add_roles only accepts one role
+    # (I think...need to figure this out)    
     edited_role = roles[0]
     authors_roles = ctx.author.roles
 
+    # Make sure author has permission to assign this role
     for role in authors_roles:
         if role in permitted_role_obj_assignments:
             if edited_role in permitted_role_obj_assignments[role]:
                 allowed = True
     
+    # If author has permission, assign role to all mentioned members if they don't already have it
     if allowed:
         for member in members:
             if edited_role in member.roles:
@@ -531,10 +544,13 @@ async def role_add(ctx):
                 log.info("Adding role {} - to member {}".format(edited_role, member))
                 await member.add_roles(edited_role)
                 message_member_mentions.append(member.mention)
-        
+        # Send botboy message confirmation
         await ctx.send("Added role: {} - to members: {}".format(edited_role.mention, message_member_mentions))
     else:
+        # Send botboy message error
         await ctx.send("ERROR: user {} not permitted to add role {}".format(ctx.author.mention, edited_role.mention))
+
+
 
 setup.setup_logger()
 
