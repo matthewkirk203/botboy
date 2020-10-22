@@ -12,6 +12,7 @@ import overwatch_helpers as owh
 import discord_token
 import json
 import re
+import functools
 
 
 # Establish db connection
@@ -30,6 +31,78 @@ TOKEN = discord_token.botboy_token
 
 description = '''BotBoy is here'''
 bot = commands.Bot(command_prefix='!', description=description)
+
+#===== Permissions dictionaries =====
+
+# Dict containing permissions for roles to assign other roles -- contains role objects
+permitted_role_obj_assignments = {}
+# Dict containing permissions for roles to assign other roles -- contains role names
+# NOTE: these two dicts should have the same roles/permissions
+permitted_role_name_assignments = {}
+
+permissions_commands = {
+    "Cow Cult" : {
+        "help" : ["@everyone"],
+        "role_add_permission" : ["founder"],
+        "role_remove_permission" : ["founder"],
+        "role_add" : ["helper"],
+        "role_remove" : ["helper"]
+    },
+    "J&M Industries" : {
+        "help" : ["@everyone"],
+        "role_add_permission" : ["founder"],
+        "role_remove_permission" : ["founder"],
+        "role_add" : ["helper"],
+        "role_remove" : ["helper"],
+        "hello" : ["@everyone"],
+        "my_roles" : ["founder"]
+    }
+}
+
+
+
+async def check_user_has_permission(ctx):
+    # print("COMMAND: {}".format(ctx.command))
+    # log.info("COMMANDS: {}".format(bot.commands))
+    log.info("test")
+    async def role_check_predicate(ctx):
+        log.info("In predicate")
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise commands.NoPrivateMessage()
+
+        if ctx.guild:
+            if ctx.guild.name in permissions_commands.keys():
+                if ctx.command.name in permissions_commands[ctx.guild.name].keys():
+                    items = permissions_commands[ctx.guild.name][ctx.command.name]
+                    log.debug("Permitted roles for command [{}] -  {}".format(ctx.command.name, items))
+                else:
+                    log.warning("Command [{}] not in permissions_commands dict for guild [{}]".format(ctx.command.name, ctx.guild.name))
+                    await ctx.send("ERROR: guild doesn't have command permissions set up for command [{}]".format(ctx.command.name))
+                    return False
+            else:
+                log.warning("Guild [{}] not in permissions_commands dict".format(ctx.guild.name))
+                await ctx.send("ERROR: guild doesn't have command permissions set up")
+                return False
+        else:
+            log.warning("No guild associated with command [{}]".format(ctx.command.name))
+            await ctx.send("ERROR: guild doesn't have command permissions set up")
+            return False
+
+        getter = functools.partial(discord.utils.get, ctx.author.roles)
+        if any(getter(id=item) is not None if isinstance(item, int) else getter(name=item) is not None for item in items):
+            return True
+
+        log.warning("User [{}] doesn't have role permissions to run command [{}]".format(ctx.author.name, ctx.command.name))
+        await ctx.send("ERROR: user [{}] does not have permission to run command [{}]".format(ctx.author.name, ctx.command.name))
+        raise commands.MissingAnyRole(items)
+
+    # return commands.check(predicate)
+    rval = await role_check_predicate(ctx)
+    return rval
+    # return role_check_predicate(ctx)
+
+bot.add_check(check_user_has_permission)
+
 
 async def background_tasks(loop_timer):
     await bot.wait_until_ready()
@@ -426,11 +499,6 @@ async def policer(message):
         # TODO: do async's need an await every time? Or is return sufficient?
         return
 
-# Dict containing permissions for roles to assign other roles -- contains role objects
-permitted_role_obj_assignments = {}
-# Dict containing permissions for roles to assign other roles -- contains role names
-# NOTE: these two dicts should have the same roles/permissions
-permitted_role_name_assignments = {}
 
 def update_role_name_dict_from_role_dict(role_obj_dict, role_name_dict):
     # Function to build dict with role names from dict with role objects
@@ -604,11 +672,11 @@ async def role_add(ctx):
         await ctx.send("ERROR: user {} not permitted to add role {}".format(ctx.author.mention, edited_role.mention))
 
 
-
 setup.setup_logger()
 
 log = logging.getLogger('BotBoy')
 
+log.info("COMMANDS: {}".format([x.name for x in bot.commands]))
 # bot.loop.create_task(background_tasks(60))
 bot.run(TOKEN)
 conn.close()
